@@ -434,7 +434,7 @@
                   </template>
                 </el-table-column>
 
-                <el-table-column prop="class" label=“缺陷类型” width="120">
+                <el-table-column prop="class" label=“检测类型” width="120">
                   <template #default="scope">
                     <el-tag :type="getDefectType(scope.row.class)" size="large">
                       {{ scope.row.class }}
