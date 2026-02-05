@@ -54,7 +54,7 @@
 #### 1. 克隆项目
 
 ```bash
-git clone <项目地址>
+git clone <https://github.com/Pursuerbin/git_yolo_detect.git>
 cd git_yolo_detect
 ```
 
@@ -199,25 +199,33 @@ git_yolo_detect/
 ├── backend/           # 后端代码
 │   ├── app.py         # 主应用文件
 │   ├── requirements.txt # 依赖文件
-│   ├── .env.example   # 环境变量示例
 │   ├── .env           # 环境变量
+│   ├── .env.bak       # 环境变量备份
 │   ├── uploads/       # 上传文件目录
 │   ├── results/       # 检测结果目录
-│   ├── models/        # 模型文件目录
-│   └── videos/        # 视频文件目录
 ├── frontend/          # 前端代码
 │   ├── src/           # 源代码
 │   │   ├── views/     # 页面组件
+│   │   │   ├── AboutView.vue
+│   │   │   ├── HistoryView.vue
+│   │   │   └── LoginView.vue
 │   │   ├── components/ # 通用组件
 │   │   ├── router/    # 路由配置
 │   │   ├── stores/    # 状态管理
-│   │   └── api/       # API请求
+│   │   ├── utils/     # 工具函数
+│   │   ├── config/    # 配置文件
+│   │   ├── styles/    # 样式文件
+│   │   └── assets/    # 静态资源
 │   ├── package.json   # 项目配置
 │   └── vite.config.ts # Vite配置
 ├── README.md          # 项目说明
 ├── 核心功能模块.md     # 核心功能模块分析
 ├── 项目技术分析报告.md # 项目技术分析报告
-└── 绝缘子缺陷检测系统需求文档.md # 需求文档
+├── 绝缘子缺陷检测系统需求文档.md # 需求文档
+├── API接口文档.md     # API接口文档
+├── 数据库设计文档.md   # 数据库设计文档
+├── 架构设计图描述.md   # 架构设计图描述
+└── .gitignore         # Git忽略文件
 ```
 
 ## 常见问题
@@ -254,7 +262,7 @@ git_yolo_detect/
 
 - **作者**：吴权彬
 - **邮箱**：<1597338110@qq.com>
-- **项目地址**：<项目地址>
+- **项目地址**：<https://github.com/Pursuerbin/git_yolo_detect>
 
 ## 许可证
 
