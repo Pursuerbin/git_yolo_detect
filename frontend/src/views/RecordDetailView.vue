@@ -546,9 +546,8 @@ const retryLoad = () => {
 }
 
 const goBack = () => {
-  // 直接关闭对话框，由父组件控制
-  const emit = defineEmits(['close'])
-  emit('close')
+  // 跳转到历史记录页面
+  router.push('/history')
 }
 
 const getFileName = (path) => {
@@ -871,7 +870,7 @@ const drawHighlightedDetection = () => {
 const exportDetection = (detection, index) => {
   const data = {
     序号: index + 1,
-    缺陷类别: detection.class,
+    检测类别: detection.class,
     置信度: `${(detection.confidence * 100).toFixed(2)}%`,
     左上角坐标: `(${detection.x1}, ${detection.y1})`,
     右下角坐标: `(${detection.x2}, ${detection.y2})`,
@@ -900,7 +899,7 @@ const exportTableToExcel = () => {
 
   const data = detections.value.map((det, index) => ({
     序号: index + 1,
-    缺陷类别: det.class,
+    检测类别: det.class,
     置信度: `${(det.confidence * 100).toFixed(2)}%`,
     左上角X: det.x1,
     左上角Y: det.y1,
@@ -942,7 +941,7 @@ const exportTableToCSV = () => {
     return
   }
 
-  const headers = ['序号', '缺陷类别', '置信度', '左上角X', '左上角Y', '右下角X', '右下角Y', '宽度', '高度', '面积']
+  const headers = ['序号', '检测类别', '置信度', '左上角X', '左上角Y', '右下角X', '右下角Y', '宽度', '高度', '面积']
   const rows = detections.value.map((det, index) => [
     index + 1,
     det.class,
