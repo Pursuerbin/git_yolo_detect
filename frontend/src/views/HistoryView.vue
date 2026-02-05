@@ -1482,31 +1482,13 @@ const exportSingleRecord = async (record) => {
 // 分享记录
 const shareRecord = async (record) => {
   try {
-    // 首先获取记录的详细信息，以获取结果文件名
-    let resultUrl = ''
-
-    if (record.detection_type === 'image' && record.result_filename) {
-      resultUrl = `${window.location.origin}/static/results/${record.result_filename}`
-    } else if (record.detection_type === 'video' && record.processed_video_filename) {
-      resultUrl = `${window.location.origin}/static/results/${record.processed_video_filename}`
-    } else {
-      // 尝试从API获取详情
-      try {
-        const res = await axios.get(`http://localhost:5000/api/records/${record.id}`)
-        if (res.data.record.result_filename) {
-          resultUrl = `${window.location.origin}/static/results/${res.data.record.result_filename}`
-        } else if (res.data.record.processed_video_path) {
-          resultUrl = `${window.location.origin}/static/results/${res.data.record.processed_video_path}`
-        }
-      } catch (err) {
-        console.error('获取分享链接失败:', err)
-      }
-    }
+    // 构建指向记录详情页面的链接
+    const detailUrl = `${window.location.origin}/record/${record.id}`
 
     const shareData = {
       title: `绝缘子缺陷检测记录 - ${record.filename}`,
       text: `检测时间: ${formatDateTime(record.detect_time)}\n检测数量: ${record.total_objects}\n平均置信度: ${(record.confidence_avg * 100).toFixed(1)}%`,
-      url: resultUrl || `${window.location.origin}/record/${record.id}`
+      url: detailUrl
     }
 
     if (navigator.share) {
