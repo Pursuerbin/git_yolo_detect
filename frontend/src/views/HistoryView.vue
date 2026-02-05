@@ -1984,7 +1984,7 @@ watch([searchQuery, selectedTypes, dateRange], () => {
 
 /* 搜索框 */
 .search-filter {
-  padding: 10px 0;
+  padding: 10px 16px;
 }
 
 .search-input :deep(.el-input__wrapper) {
@@ -1994,7 +1994,7 @@ watch([searchQuery, selectedTypes, dateRange], () => {
 
 /* 类型筛选 */
 .type-filter {
-  padding: 10px 0;
+  padding: 10px 16px;
 }
 
 .type-option {
@@ -2006,7 +2006,7 @@ watch([searchQuery, selectedTypes, dateRange], () => {
 
 /* 日期筛选 */
 .date-filter {
-  padding: 10px 0;
+  padding: 10px 16px;
 }
 
 .date-range-picker {
@@ -2027,6 +2027,7 @@ watch([searchQuery, selectedTypes, dateRange], () => {
 
 /* 统计信息 */
 .stats-summary {
+  padding: 10px 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
