@@ -415,7 +415,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import { Chart, registerables } from 'chart.js'
 import * as XLSX from 'xlsx'
@@ -441,6 +441,7 @@ const props = defineProps({
 Chart.register(...registerables)
 
 const router = useRouter()
+const route = useRoute()
 
 // 响应式数据
 const record = ref({})
@@ -488,8 +489,8 @@ const loadRecordDetail = async () => {
   loading.value = true
   error.value = ''
   try {
-    // 使用props.recordId
-    const recordId = props.recordId
+    // 优先使用路由参数id，其次使用props.recordId
+    const recordId = route.params.id || props.recordId
 
     // 添加参数检查
     if (!recordId || recordId === 'undefined') {
