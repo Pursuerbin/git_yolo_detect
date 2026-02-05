@@ -726,6 +726,23 @@ import RecordDetailView from './RecordDetailView.vue'
 const icons = ElementPlusIconsVue
 const router = useRouter()
 
+// ==================== API基础地址 ====================
+const getApiBase = () => {
+  const hostname = window.location.hostname
+  const protocol = window.location.protocol
+
+  // 开发环境（本地）
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5000'
+  }
+
+  // 默认使用当前域
+  return `${protocol}//${hostname}${window.location.port ? ':' + window.location.port : ''}`
+}
+
+const API_BASE = getApiBase()
+console.log('🔧 API基础地址:', API_BASE)
+
 // ==================== 响应式数据 ====================
 const records = ref([])
 const filteredRecords = ref([])
@@ -824,7 +841,7 @@ onMounted(() => {
 const loadRecords = async () => {
   loading.value = true;
   try {
-    const res = await axios.get('http://localhost:5000/api/history');
+    const res = await axios.get(`${API_BASE}/api/history`);
     console.log('API返回的历史记录数据:', res.data);
 
     // 检查第一条记录的detections字段
@@ -857,7 +874,7 @@ const loadRecords = async () => {
       // 如果 confidence_avg 为 0，尝试获取详情
       if (!confidence_avg && record.id) {
         try {
-          const detailRes = await axios.get(`http://localhost:5000/api/records/${record.id}`);
+          const detailRes = await axios.get(`${API_BASE}/api/records/${record.id}`);
           if (detailRes.data.record && detailRes.data.record.confidence_avg) {
             let detailAvg = parseFloat(detailRes.data.record.confidence_avg) || 0;
             if (!isNaN(detailAvg)) {

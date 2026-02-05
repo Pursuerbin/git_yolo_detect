@@ -460,8 +460,22 @@ const highlightCanvas = ref(null)
 let insulatorChartInstance = null
 let defectChartInstance = null
 
-// 计算属性
-const apiBaseUrl = 'http://localhost:5000'
+// ==================== API基础地址 ====================
+const getApiBase = () => {
+  const hostname = window.location.hostname
+  const protocol = window.location.protocol
+
+  // 开发环境（本地）
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5000'
+  }
+
+  // 默认使用当前域
+  return `${protocol}//${hostname}${window.location.port ? ':' + window.location.port : ''}`
+}
+
+const apiBaseUrl = getApiBase()
+console.log('🔧 API基础地址:', apiBaseUrl)
 
 // 生命周期钩子
 onMounted(() => {
