@@ -1666,37 +1666,28 @@ const exportStatistics = async () => {
       recentRecords: recentRecords.value.slice(0, 5)
     }
 
-    // 动态导入jsPDF和html2canvas
-    const { jsPDF } = await import('jspdf')
-    const html2canvas = (await import('html2canvas')).default
+    // 创建临时DOM元素用于渲染统计数据
+    const statsContainer = document.createElement('div')
+    statsContainer.style.position = 'absolute'
+    statsContainer.style.left = '-9999px'
+    statsContainer.style.top = '-9999px'
+    statsContainer.style.width = '800px'
+    statsContainer.style.padding = '40px'
+    statsContainer.style.backgroundColor = '#ffffff'
+    statsContainer.style.fontFamily = 'Arial, sans-serif'
 
-    // 创建PDF文档
-    const doc = new jsPDF('p', 'mm', 'a4')
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const margin = 20
-    let yPosition = 20
+    // 构建统计数据HTML
+    let statsHtml = `
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="font-size: 24px; margin-bottom: 10px;">绝缘子缺陷检测系统 - 统计报告</h1>
+        <p style="font-size: 14px; color: #666;">导出时间: ${statsData.exportTime}</p>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h2 style="font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #333; padding-bottom: 5px;">统计概览</h2>
+        <div style="font-size: 14px;">
+    `
 
-    // 添加标题
-    doc.setFontSize(20)
-    doc.setFont('helvetica', 'bold')
-    doc.text('绝缘子缺陷检测系统 - 统计报告', pageWidth / 2, yPosition, { align: 'center' })
-    yPosition += 15
-
-    // 添加导出时间
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`导出时间: ${statsData.exportTime}`, pageWidth / 2, yPosition, { align: 'center' })
-    yPosition += 20
-
-    // 添加统计概览
-    doc.setFontSize(16)
-    doc.setFont('helvetica', 'bold')
-    doc.text('统计概览', margin, yPosition)
-    yPosition += 10
-
-    // 添加统计数据
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'normal')
     const stats = [
       { label: '总检测记录数', value: statsData.totalRecords },
       { label: '图片检测记录', value: statsData.imageCount },
@@ -1708,35 +1699,61 @@ const exportStatistics = async () => {
     ]
 
     stats.forEach(stat => {
-      doc.text(`${stat.label}: ${stat.value}`, margin, yPosition)
-      yPosition += 8
+      statsHtml += `<p style="margin: 8px 0;"><strong>${stat.label}:</strong> ${stat.value}</p>`
     })
 
-    yPosition += 15
+    statsHtml += `
+        </div>
+      </div>
+      
+      <div>
+        <h2 style="font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #333; padding-bottom: 5px;">最近检测记录</h2>
+        <div style="font-size: 12px;">
+    `
 
-    // 添加最近检测记录
-    doc.setFontSize(16)
-    doc.setFont('helvetica', 'bold')
-    doc.text('最近检测记录', margin, yPosition)
-    yPosition += 10
-
-    doc.setFontSize(10)
     statsData.recentRecords.forEach((record, index) => {
-      const recordInfo = `${index + 1}. ${shortenFilename(record.filename, 30)} - ${formatDateTime(record.detect_time)} - ${record.total_objects || 0} 检测`
-      doc.text(recordInfo, margin, yPosition)
-      yPosition += 6
-      if (yPosition > 270) {
-        doc.addPage()
-        yPosition = 20
-      }
+      const recordInfo = `${index + 1}. ${shortenFilename(record.filename, 40)} - ${formatDateTime(record.detect_time)} - ${record.total_objects || 0} 检测`
+      statsHtml += `<p style="margin: 6px 0;">${recordInfo}</p>`
     })
+
+    statsHtml += `
+        </div>
+      </div>
+    `
+
+    statsContainer.innerHTML = statsHtml
+    document.body.appendChild(statsContainer)
+
+    // 动态导入jsPDF和html2canvas
+    const { jsPDF } = await import('jspdf')
+    const html2canvas = (await import('html2canvas')).default
+
+    // 使用html2canvas将统计数据转换为canvas
+    const canvas = await html2canvas(statsContainer, {
+      scale: 2,
+      useCORS: true,
+      logging: false
+    })
+
+    // 移除临时DOM元素
+    document.body.removeChild(statsContainer)
+
+    // 获取图片数据
+    const imgData = canvas.toDataURL('image/png')
+
+    // 创建PDF
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    const imgWidth = 210
+    const imgHeight = canvas.height * imgWidth / canvas.width
+
+    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
 
     // 生成文件名
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const filename = `绝缘子缺陷检测系统_统计报告_${timestamp}.pdf`
 
     // 保存PDF
-    doc.save(filename)
+    pdf.save(filename)
 
     ElNotification({
       title: '导出成功',
