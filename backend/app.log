@@ -1,0 +1,103 @@
+2026-02-04 20:50:27,681 - app - INFO - GPU内存 - 已分配: 0.08GB, 保留: 0.09GB
+2026-02-04 20:50:27,682 - app - INFO - 模型加载成功: best.pt (设备: cuda:0)
+2026-02-04 20:50:27,686 - app - INFO - [成功]内存监控已启动（每2分钟检测一次）
+2026-02-04 20:50:27,687 - app - INFO - 服务启动在: 0.0.0.0:5000
+2026-02-04 20:50:27,687 - app - INFO - --------------------------------------------------
+2026-02-04 20:51:23,533 - app - INFO - 请求: POST /api/switch_device - IP: 127.0.0.1
+2026-02-04 20:51:28,720 - app - INFO - 请求: POST /api/detect - IP: 127.0.0.1
+2026-02-04 20:51:39,222 - app - INFO - 请求: POST /api/switch_device - IP: 127.0.0.1
+2026-02-04 20:51:40,913 - app - INFO - 请求: POST /api/switch_device - IP: 127.0.0.1
+2026-02-04 20:51:44,752 - app - INFO - 请求: POST /api/detect - IP: 127.0.0.1
+2026-02-05 01:54:28,037 - app - INFO - [启动] YOLOv11绝缘子缺陷检测系统后端启动
+2026-02-05 01:54:28,053 - app - INFO - [主机]主机名: Bins
+2026-02-05 01:54:28,053 - app - INFO - [IP]服务器IP: 192.168.244.1:5000
+2026-02-05 01:54:28,053 - app - INFO - [IP]服务器IP: 192.168.219.1:5000
+2026-02-05 01:54:28,053 - app - INFO - [IP]服务器IP: 192.168.137.1:5000
+2026-02-05 01:54:28,053 - app - INFO - [IP]服务器IP: 192.168.1.11:5000
+2026-02-05 01:54:28,053 - app - INFO - [目录]上传目录: D:\Program\Develop\deeplearning\project\backend\uploads
+2026-02-05 01:54:28,053 - app - INFO - [目录]结果目录: D:\Program\Develop\deeplearning\project\backend\results
+2026-02-05 01:54:28,053 - app - INFO - [工具]PyTorch版本: 2.9.1+cu128
+2026-02-05 01:54:28,057 - app - INFO - [设备]GPU 0: NVIDIA GeForce RTX 5060 Ti
+2026-02-05 01:54:28,069 - app - ERROR - 数据库连接失败: 'cryptography' package is required for sha256_password or caching_sha2_password auth methods
+2026-02-05 01:54:28,069 - app - INFO - [成功]数据库初始化成功
+2026-02-05 01:54:28,327 - app - INFO - GPU内存 - 已分配: 0.08GB, 保留: 0.09GB
+2026-02-05 01:54:28,327 - app - INFO - 模型加载成功: best.pt (设备: cuda:0)
+2026-02-05 01:54:28,327 - app - INFO - [成功]内存监控已启动（每2分钟检测一次）
+2026-02-05 01:54:28,329 - app - INFO - 服务启动在: 0.0.0.0:5000
+2026-02-05 01:54:28,329 - app - INFO - --------------------------------------------------
+2026-02-05 02:07:29,221 - app - INFO - 请求: POST /api/login - IP: 127.0.0.1
+2026-02-05 02:07:29,221 - app - INFO - 用户登录尝试 - 用户名: demo
+2026-02-05 02:07:29,221 - app - ERROR - 数据库连接失败: 'cryptography' package is required for sha256_password or caching_sha2_password auth methods
+2026-02-05 02:07:29,224 - app - ERROR - 登录异常 - 用户名: demo - 错误: 'cryptography' package is required for sha256_password or caching_sha2_password auth methods
+Traceback (most recent call last):
+  File "D:\Program\Develop\deeplearning\project\backend\app.py", line 752, in login
+    conn = get_db_connection()
+           ^^^^^^^^^^^^^^^^^^^
+  File "D:\Program\Develop\deeplearning\project\backend\app.py", line 313, in get_db_connection
+    connection = pymysql.connect(
+                 ^^^^^^^^^^^^^^^^
+  File "D:\Program\Develop\miniconda3\envs\yolo\Lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\Program\Develop\miniconda3\envs\yolo\Lib\site-packages\pymysql\connections.py", line 681, in connect
+    self._request_authentication()
+  File "D:\Program\Develop\miniconda3\envs\yolo\Lib\site-packages\pymysql\connections.py", line 980, in _request_authentication
+    auth_packet = _auth.caching_sha2_password_auth(self, auth_packet)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Program\Develop\miniconda3\envs\yolo\Lib\site-packages\pymysql\_auth.py", line 271, in caching_sha2_password_auth
+    data = sha2_rsa_encrypt(conn.password, conn.salt, conn.server_public_key)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Program\Develop\miniconda3\envs\yolo\Lib\site-packages\pymysql\_auth.py", line 144, in sha2_rsa_encrypt
+    raise RuntimeError(
+RuntimeError: 'cryptography' package is required for sha256_password or caching_sha2_password auth methods
+2026-02-05 02:07:29,238 - app - WARNING - 错误响应: POST /api/login - 状态码: 500
+2026-02-05 02:09:14,952 - app - INFO - [启动] YOLOv11绝缘子缺陷检测系统后端启动
+2026-02-05 02:09:14,952 - app - INFO - [主机]主机名: Bins
+2026-02-05 02:09:14,957 - app - INFO - [IP]服务器IP: 192.168.244.1:5000
+2026-02-05 02:09:14,957 - app - INFO - [IP]服务器IP: 192.168.219.1:5000
+2026-02-05 02:09:14,957 - app - INFO - [IP]服务器IP: 192.168.1.11:5000
+2026-02-05 02:09:14,957 - app - INFO - [目录]上传目录: D:\Program\Develop\deeplearning\project\backend\uploads
+2026-02-05 02:09:14,957 - app - INFO - [目录]结果目录: D:\Program\Develop\deeplearning\project\backend\results
+2026-02-05 02:09:14,957 - app - INFO - [工具]PyTorch版本: 2.9.1+cu128
+2026-02-05 02:09:14,973 - app - INFO - [设备]GPU 0: NVIDIA GeForce RTX 5060 Ti
+2026-02-05 02:09:14,974 - app - ERROR - 数据库连接失败: 'cryptography' package is required for sha256_password or caching_sha2_password auth methods
+2026-02-05 02:09:14,974 - app - INFO - [成功]数据库初始化成功
+2026-02-05 02:09:15,172 - app - INFO - GPU内存 - 已分配: 0.08GB, 保留: 0.09GB
+2026-02-05 02:09:15,172 - app - INFO - 模型加载成功: best.pt (设备: cuda:0)
+2026-02-05 02:09:15,177 - app - INFO - [成功]内存监控已启动（每2分钟检测一次）
+2026-02-05 02:09:15,177 - app - INFO - 服务启动在: 0.0.0.0:5000
+2026-02-05 02:09:15,177 - app - INFO - --------------------------------------------------
+2026-02-05 02:31:59,290 - app - INFO - [启动] YOLOv11绝缘子缺陷检测系统后端启动
+2026-02-05 02:31:59,294 - app - INFO - [主机]主机名: Bins
+2026-02-05 02:31:59,295 - app - INFO - [IP]服务器IP: 192.168.244.1:5000
+2026-02-05 02:31:59,295 - app - INFO - [IP]服务器IP: 192.168.219.1:5000
+2026-02-05 02:31:59,295 - app - INFO - [IP]服务器IP: 192.168.1.11:5000
+2026-02-05 02:31:59,295 - app - INFO - [目录]上传目录: D:\Program\Develop\deeplearning\project\backend\uploads
+2026-02-05 02:31:59,295 - app - INFO - [目录]结果目录: D:\Program\Develop\deeplearning\project\backend\results
+2026-02-05 02:31:59,296 - app - INFO - [工具]PyTorch版本: 2.9.1+cu128
+2026-02-05 02:31:59,312 - app - INFO - [设备]GPU 0: NVIDIA GeForce RTX 5060 Ti
+2026-02-05 02:31:59,332 - app - INFO - [成功]数据库初始化成功
+2026-02-05 02:31:59,570 - app - INFO - GPU内存 - 已分配: 0.08GB, 保留: 0.09GB
+2026-02-05 02:31:59,571 - app - INFO - 模型加载成功: best.pt (设备: cuda:0)
+2026-02-05 02:31:59,571 - app - INFO - [成功]内存监控已启动（每2分钟检测一次）
+2026-02-05 02:31:59,571 - app - INFO - 服务启动在: 0.0.0.0:5000
+2026-02-05 02:31:59,573 - app - INFO - --------------------------------------------------
+2026-02-05 02:32:11,613 - app - INFO - 请求: POST /api/login - IP: 127.0.0.1
+2026-02-05 02:32:11,613 - app - INFO - 用户登录尝试 - 用户名: demo
+2026-02-05 02:32:11,613 - app - INFO - 登录成功 - 用户名: demo
+2026-02-05 02:36:21,493 - app - INFO - 请求: POST /api/logs - IP: 127.0.0.1
+2026-02-05 02:36:21,494 - app - ERROR - 前端日志 - [ERROR] 2026-02-04T18:07:29.245Z: 登录请求异常
+2026-02-05 02:36:59,617 - app - INFO - [启动] YOLOv11绝缘子缺陷检测系统后端启动
+2026-02-05 02:36:59,618 - app - INFO - [主机]主机名: Bins
+2026-02-05 02:36:59,618 - app - INFO - [IP]服务器IP: 192.168.244.1:5000
+2026-02-05 02:36:59,618 - app - INFO - [IP]服务器IP: 192.168.219.1:5000
+2026-02-05 02:36:59,618 - app - INFO - [IP]服务器IP: 192.168.1.11:5000
+2026-02-05 02:36:59,618 - app - INFO - [目录]上传目录: D:\Program\Develop\deeplearning\project\backend\uploads
+2026-02-05 02:36:59,618 - app - INFO - [目录]结果目录: D:\Program\Develop\deeplearning\project\backend\results
+2026-02-05 02:36:59,618 - app - INFO - [工具]PyTorch版本: 2.9.1+cu128
+2026-02-05 02:36:59,636 - app - INFO - [设备]GPU 0: NVIDIA GeForce RTX 5060 Ti
+2026-02-05 02:36:59,636 - app - INFO - [成功]数据库初始化成功
+2026-02-05 02:36:59,840 - app - INFO - GPU内存 - 已分配: 0.08GB, 保留: 0.09GB
+2026-02-05 02:36:59,840 - app - INFO - 模型加载成功: best.pt (设备: cuda:0)
+2026-02-05 02:36:59,840 - app - INFO - [成功]内存监控已启动（每2分钟检测一次）
+2026-02-05 02:36:59,849 - app - INFO - 服务启动在: 0.0.0.0:5000
+2026-02-05 02:36:59,849 - app - INFO - --------------------------------------------------
