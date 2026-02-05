@@ -10396,3 +10396,26 @@ NameError: name 'password' is not defined
 2026-02-04 19:57:21,837 - werkzeug - INFO - 127.0.0.1 - - [04/Feb/2026 19:57:21] "GET /api/models HTTP/1.1" 200 -
 2026-02-04 19:57:22,115 - werkzeug - INFO - 127.0.0.1 - - [04/Feb/2026 19:57:22] "GET /static/uploads/77aa6b2ab9af41e293ba0f9acc6b9258_35kVN29.jpg HTTP/1.1" 200 -
 2026-02-04 19:57:22,116 - werkzeug - INFO - 127.0.0.1 - - [04/Feb/2026 19:57:22] "GET /static/results/69156e033c7d476392d78707b872bbfe.jpg HTTP/1.1" 200 -
+INFO:app:[启动] YOLOv11绝缘子缺陷检测系统后端启动
+INFO:app:[主机]主机名: Bins
+INFO:app:[IP]服务器IP: 192.168.244.1:5000
+INFO:app:[IP]服务器IP: 192.168.219.1:5000
+INFO:app:[IP]服务器IP: 192.168.137.1:5000
+INFO:app:[IP]服务器IP: 192.168.1.11:5000
+INFO:app:[目录]上传目录: D:\Program\Develop\deeplearning\git_yolo_detect\backend\uploads
+INFO:app:[目录]结果目录: D:\Program\Develop\deeplearning\git_yolo_detect\backend\results
+INFO:app:[工具]PyTorch版本: 2.10.0+cu128
+INFO:app:[设备]GPU 0: NVIDIA GeForce RTX 5060 Ti
+INFO:app:[成功]数据库初始化成功
+INFO:app:GPU内存 - 已分配: 0.08GB, 保留: 0.09GB
+INFO:app:模型加载成功: best.pt (设备: cuda:0)
+INFO:app:[成功]内存监控已启动（每2分钟检测一次）
+INFO:app:服务启动在: 0.0.0.0:5000
+INFO:app:--------------------------------------------------
+INFO:app:请求: POST /api/login - IP: 127.0.0.1
+INFO:app:用户登录尝试 - 用户名: demo
+INFO:app:登录成功 - 用户名: demo
+INFO:app:请求: POST /api/logs - IP: 127.0.0.1
+ERROR:app:前端日志 - [ERROR] 2026-02-05T17:53:57.718Z: JavaScript错误
+ERROR:app:前端日志 - [ERROR] 2026-02-05T17:50:13.292Z: 登录请求异常
+ERROR:app:前端日志 - [ERROR] 2026-02-05T17:48:41.895Z: 登录请求异常

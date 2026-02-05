@@ -312,7 +312,7 @@ function handleClickOutside(event: MouseEvent) {
   background-repeat: no-repeat;
   background-attachment: fixed; /* 可选：让背景固定，内容滚动时背景不动 */
 
-  //background: linear-gradient(45deg, #2c3e50 0%, #3498db 100%);
+  /*background: linear-gradient(45deg, #2c3e50 0%, #3498db 100%);*/
 
   position: relative;
   overflow: hidden;
@@ -348,7 +348,7 @@ function handleClickOutside(event: MouseEvent) {
 
   background: rgba(255, 255, 255, 0.05); /* 透明度调整为0.15，可以根据需要调整 */
 
-  //background: white;
+  /*background: white;*/
 
   border-radius: 20px;
   padding: 40px;
