@@ -218,7 +218,7 @@
                   {{ $index + 1 }}
                 </template>
               </el-table-column>
-              <el-table-column prop="class" label="缺陷类别" width="120">
+              <el-table-column prop="class" label="检测类别" width="120">
                 <template #default="{ row }">
                   <el-tag :type="getDefectType(row.class)" size="small">
                     {{ row.class }}
@@ -338,26 +338,36 @@
                 <el-icon><PieChart /></el-icon>
               </div>
               <div class="stat-content">
-                <div class="stat-value">{{ getDefectCountByType('破损') }}</div>
-                <div class="stat-label">破损数量</div>
+                <div class="stat-value">{{ getDefectCount() }}</div>
+                <div class="stat-label">缺陷数量</div>
               </div>
             </div>
             <div class="stat-item">
               <div class="stat-icon">
-                <el-icon><PieChart /></el-icon>
+                <el-icon><Collection /></el-icon>
               </div>
               <div class="stat-content">
-                <div class="stat-value">{{ getDefectCountByType('污秽') }}</div>
-                <div class="stat-label">污秽数量</div>
+                <div class="stat-value">{{ getInsulatorCount() }}</div>
+                <div class="stat-label">绝缘子数量</div>
               </div>
             </div>
           </div>
 
           <!-- 类别分布图表 -->
           <div class="chart-container" v-if="detections.length > 0">
-            <h4>缺陷类别分布</h4>
-            <div class="chart-wrapper">
-              <canvas ref="chartCanvas"></canvas>
+            <div class="chart-grid">
+              <div class="chart-item">
+                <h4>绝缘子类别分布</h4>
+                <div class="chart-wrapper">
+                  <canvas ref="insulatorChartCanvas"></canvas>
+                </div>
+              </div>
+              <div class="chart-item">
+                <h4>缺陷类别分布</h4>
+                <div class="chart-wrapper">
+                  <canvas ref="defectChartCanvas"></canvas>
+                </div>
+              </div>
             </div>
           </div>
         </el-card>
@@ -443,9 +453,11 @@ const mediaLoaded = ref({
 })
 const highlightDialogVisible = ref(false)
 const highlightedDetection = ref(null)
-const chartCanvas = ref(null)
+const insulatorChartCanvas = ref(null)
+const defectChartCanvas = ref(null)
 const highlightCanvas = ref(null)
-let chartInstance = null
+let insulatorChartInstance = null
+let defectChartInstance = null
 
 // 计算属性
 const apiBaseUrl = 'http://localhost:5000'
@@ -456,8 +468,11 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (chartInstance) {
-    chartInstance.destroy()
+  if (insulatorChartInstance) {
+    insulatorChartInstance.destroy()
+  }
+  if (defectChartInstance) {
+    defectChartInstance.destroy()
   }
 })
 
@@ -500,7 +515,7 @@ const loadRecordDetail = async () => {
 
       // 初始化图表
       nextTick(() => {
-        initChart()
+        initCharts()
       })
     } else {
       error.value = '未找到记录详情'
@@ -635,18 +650,44 @@ const getDefectCountByType = (type) => {
   return detections.value.filter(det => det.class === type).length
 }
 
-const initChart = () => {
-  if (!chartCanvas.value || detections.value.length === 0) return
+const getDefectCount = () => {
+  const defectTypes = ['破损', '污秽', '锈蚀']
+  return detections.value.filter(det => defectTypes.includes(det.class)).length
+}
 
-  if (chartInstance) {
-    chartInstance.destroy()
+const getInsulatorCount = () => {
+  const insulatorTypes = ['瓷质', '玻璃', '复合']
+  return detections.value.filter(det => insulatorTypes.includes(det.class)).length
+}
+
+const initCharts = () => {
+  if (detections.value.length === 0) return
+  initInsulatorChart()
+  initDefectChart()
+}
+
+const initInsulatorChart = () => {
+  if (!insulatorChartCanvas.value) return
+
+  if (insulatorChartInstance) {
+    insulatorChartInstance.destroy()
   }
 
-  // 统计类别分布
+  // 统计绝缘子类别分布
+  const insulatorTypes = ['瓷质', '玻璃', '复合']
   const classCounts = {}
+  
+  // 初始化所有绝缘子类型的计数为0
+  insulatorTypes.forEach(type => {
+    classCounts[type] = 0
+  })
+  
+  // 统计实际检测到的绝缘子类型
   detections.value.forEach(det => {
     const className = det.class
-    classCounts[className] = (classCounts[className] || 0) + 1
+    if (insulatorTypes.includes(className)) {
+      classCounts[className] = (classCounts[className] || 0) + 1
+    }
   })
 
   const labels = Object.keys(classCounts)
@@ -654,12 +695,11 @@ const initChart = () => {
 
   // 设置颜色
   const backgroundColors = [
-    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
-    '#9966FF', '#FF9F40', '#8AC926', '#1982C4'
+    '#36A2EB', '#4BC0C0', '#9966FF'
   ]
 
-  const ctx = chartCanvas.value.getContext('2d')
-  chartInstance = new Chart(ctx, {
+  const ctx = insulatorChartCanvas.value.getContext('2d')
+  insulatorChartInstance = new Chart(ctx, {
     type: 'pie',
     data: {
       labels: labels,
@@ -686,7 +726,77 @@ const initChart = () => {
               const label = context.label || ''
               const value = context.raw || 0
               const total = context.dataset.data.reduce((a, b) => a + b, 0)
-              const percentage = Math.round((value / total) * 100)
+              const percentage = total > 0 ? Math.round((value / total) * 100) : 0
+              return `${label}: ${value} (${percentage}%)`
+            }
+          }
+        }
+      }
+    }
+  })
+}
+
+const initDefectChart = () => {
+  if (!defectChartCanvas.value) return
+
+  if (defectChartInstance) {
+    defectChartInstance.destroy()
+  }
+
+  // 统计缺陷类别分布
+  const defectTypes = ['破损', '污秽', '锈蚀']
+  const classCounts = {}
+  
+  // 初始化所有缺陷类型的计数为0
+  defectTypes.forEach(type => {
+    classCounts[type] = 0
+  })
+  
+  // 统计实际检测到的缺陷类型
+  detections.value.forEach(det => {
+    const className = det.class
+    if (defectTypes.includes(className)) {
+      classCounts[className] = (classCounts[className] || 0) + 1
+    }
+  })
+
+  const labels = Object.keys(classCounts)
+  const data = Object.values(classCounts)
+
+  // 设置颜色
+  const backgroundColors = [
+    '#FF6384', '#FFCE56', '#FF9F40'
+  ]
+
+  const ctx = defectChartCanvas.value.getContext('2d')
+  defectChartInstance = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: backgroundColors.slice(0, labels.length),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            font: {
+              size: 12
+            }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const label = context.label || ''
+              const value = context.raw || 0
+              const total = context.dataset.data.reduce((a, b) => a + b, 0)
+              const percentage = total > 0 ? Math.round((value / total) * 100) : 0
               return `${label}: ${value} (${percentage}%)`
             }
           }
@@ -1409,6 +1519,30 @@ import { ElNotification, ElMessageBox } from 'element-plus'
   margin: 0 0 15px 0;
   color: #2c3e50;
   font-size: 18px;
+  font-weight: 600;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+.chart-item {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.chart-item:hover {
+  background: #e9ecef;
+}
+
+.chart-item h4 {
+  margin: 0 0 15px 0;
+  color: #2c3e50;
+  font-size: 16px;
   font-weight: 600;
 }
 
