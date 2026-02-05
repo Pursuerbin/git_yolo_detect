@@ -1173,11 +1173,11 @@ const getConfidenceColor = (confidence) => {
   return '#909399' // 灰色
 }
 
-// 查看缺陷详情
+// 查看检测详情
 const viewDefectDetail = (defect) => {
   ElMessageBox.alert(
     `<div class="defect-detail">
-      <h3>缺陷详情</h3>
+      <h3>检测详情</h3>
       <p><strong>类型:</strong> ${defect.class}</p>
       <p><strong>置信度:</strong> ${(defect.confidence * 100).toFixed(1)}%</p>
       <p><strong>位置:</strong> (${defect.x1}, ${defect.y1}) → (${defect.x2}, ${defect.y2})</p>
