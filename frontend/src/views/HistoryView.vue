@@ -720,7 +720,7 @@ import axios from 'axios'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
 // 添加 Element Plus 组件导入
-import { ElNotification, ElMessageBox } from 'element-plus'
+import { ElNotification, ElMessageBox, ElLoading } from 'element-plus'
 import RecordDetailView from './RecordDetailView.vue'
 
 const icons = ElementPlusIconsVue
@@ -1644,34 +1644,175 @@ const exportAllRecords = () => {
 }
 
 // 导出统计报告
-const exportStatistics = () => {
-  ElNotification({
-    title: '功能开发中',
-    message: '统计报告导出功能正在开发中',
-    type: 'info',
-    duration: 2000
-  })
+const exportStatistics = async () => {
+  try {
+    ElNotification({
+      title: '生成报告',
+      message: '正在生成统计报告，请稍候...',
+      type: 'info',
+      duration: 3000
+    })
+
+    // 收集统计数据
+    const statsData = {
+      totalRecords: totalRecords.value,
+      imageCount: imageCount.value,
+      videoCount: videoCount.value,
+      cameraCount: cameraCount.value,
+      totalDefects: totalDefects.value,
+      averageConfidence: parseFloat(averageConfidence.value) || 0,
+      oldestRecordTime: oldestRecordTime.value,
+      exportTime: new Date().toLocaleString(),
+      recentRecords: recentRecords.value.slice(0, 5)
+    }
+
+    // 动态导入jsPDF和html2canvas
+    const { jsPDF } = await import('jspdf')
+    const html2canvas = (await import('html2canvas')).default
+
+    // 创建PDF文档
+    const doc = new jsPDF('p', 'mm', 'a4')
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const margin = 20
+    let yPosition = 20
+
+    // 添加标题
+    doc.setFontSize(20)
+    doc.setFont('helvetica', 'bold')
+    doc.text('绝缘子缺陷检测系统 - 统计报告', pageWidth / 2, yPosition, { align: 'center' })
+    yPosition += 15
+
+    // 添加导出时间
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`导出时间: ${statsData.exportTime}`, pageWidth / 2, yPosition, { align: 'center' })
+    yPosition += 20
+
+    // 添加统计概览
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.text('统计概览', margin, yPosition)
+    yPosition += 10
+
+    // 添加统计数据
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    const stats = [
+      { label: '总检测记录数', value: statsData.totalRecords },
+      { label: '图片检测记录', value: statsData.imageCount },
+      { label: '视频检测记录', value: statsData.videoCount },
+      { label: '摄像头检测记录', value: statsData.cameraCount },
+      { label: '总检测缺陷数', value: statsData.totalDefects },
+      { label: '平均置信度', value: `${statsData.averageConfidence}%` },
+      { label: '最早记录时间', value: statsData.oldestRecordTime }
+    ]
+
+    stats.forEach(stat => {
+      doc.text(`${stat.label}: ${stat.value}`, margin, yPosition)
+      yPosition += 8
+    })
+
+    yPosition += 15
+
+    // 添加最近检测记录
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.text('最近检测记录', margin, yPosition)
+    yPosition += 10
+
+    doc.setFontSize(10)
+    statsData.recentRecords.forEach((record, index) => {
+      const recordInfo = `${index + 1}. ${shortenFilename(record.filename, 30)} - ${formatDateTime(record.detect_time)} - ${record.total_objects || 0} 检测`
+      doc.text(recordInfo, margin, yPosition)
+      yPosition += 6
+      if (yPosition > 270) {
+        doc.addPage()
+        yPosition = 20
+      }
+    })
+
+    // 生成文件名
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const filename = `绝缘子缺陷检测系统_统计报告_${timestamp}.pdf`
+
+    // 保存PDF
+    doc.save(filename)
+
+    ElNotification({
+      title: '导出成功',
+      message: `统计报告已导出为 ${filename}`,
+      type: 'success',
+      duration: 3000
+    })
+  } catch (err) {
+    console.error('导出统计报告失败:', err)
+    ElNotification({
+      title: '导出失败',
+      message: '生成统计报告失败，请重试',
+      type: 'error',
+      duration: 3000
+    })
+  }
 }
 
 // 清空所有记录
-const clearAllRecords = () => {
-  ElMessageBox.confirm(
-    '确定要清空所有检测记录吗？此操作不可恢复，且会删除所有数据。',
-    '清空确认',
-    {
-      confirmButtonText: '确定清空',
-      cancelButtonText: '取消',
-      type: 'error',
-      confirmButtonClass: 'el-button--danger'
-    }
-  ).then(() => {
-    ElNotification({
-      title: '功能开发中',
-      message: '批量删除功能正在开发中',
-      type: 'info',
-      duration: 2000
+const clearAllRecords = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要清空所有检测记录吗？此操作不可恢复，且会删除所有数据。',
+      '清空确认',
+      {
+        confirmButtonText: '确定清空',
+        cancelButtonText: '取消',
+        type: 'error',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+
+    // 显示加载状态
+    const loadingInstance = ElLoading.service({
+      lock: true,
+      text: '正在清空记录...',
+      background: 'rgba(0, 0, 0, 0.7)'
     })
-  })
+
+    try {
+      // 发送请求到后端API清空所有记录
+      const response = await axios.post('http://localhost:5000/api/records/clear_all')
+
+      loadingInstance.close()
+
+      if (response.data.success) {
+        ElNotification({
+          title: '清空成功',
+          message: `已清空 ${response.data.deleted_count} 条记录`,
+          type: 'success',
+          duration: 3000
+        })
+
+        // 重新加载数据
+        await loadRecords()
+      } else {
+        throw new Error(response.data.message || '清空失败')
+      }
+    } catch (err) {
+      loadingInstance.close()
+      throw err
+    }
+  } catch (err) {
+    // 如果是用户取消操作，不显示错误
+    if (err === 'cancel' || err === 'close') {
+      return
+    }
+
+    console.error('清空记录失败:', err)
+    ElNotification({
+      title: '清空失败',
+      message: err.message || '清空记录失败，请重试',
+      type: 'error',
+      duration: 3000
+    })
+  }
 }
 
 // 分页处理
