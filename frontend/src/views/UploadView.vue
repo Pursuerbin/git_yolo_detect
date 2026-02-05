@@ -58,9 +58,17 @@
               />
             </el-select>
             <div class="model-info">
-              <el-tag type="success" size="large">
-                <el-icon><SuccessFilled /></el-icon>
-                已加载: {{ modelInfo }}
+              <el-tag 
+                :type="!backendStatus.connected ? 'danger' : (modelLoaded ? 'success' : 'warning')" 
+                size="large"
+              >
+                <el-icon>
+                  <component :is="!backendStatus.connected ? 'WarningFilled' : (modelLoaded ? 'SuccessFilled' : 'WarningFilled')" />
+                </el-icon>
+                {{ 
+                  !backendStatus.connected ? '未连接' : 
+                  modelLoaded ? `已加载: ${modelInfo}` : '未加载'
+                }}
               </el-tag>
             </div>
           </div>
@@ -77,6 +85,7 @@
                 <!-- 设备检测状态 -->
                 <!-- 在设备检测状态部分添加空值检查 -->
                 <div class="device-status" v-if="deviceInfo">
+                    <!-- 设备状态 -->
                     <el-tag :type="deviceInfo.hasGpu ? 'success' : 'warning'" size="large">
                         <el-icon><Cpu /></el-icon>
                         {{ deviceInfo.currentDevice || 'CPU' }}
@@ -516,7 +525,9 @@
                 <el-icon><Connection /></el-icon>
                 <span>后端连接</span>
               </div>
-              <el-tag type="success" effect="dark">正常</el-tag>
+              <el-tag :type="backendStatus.connected ? 'success' : 'danger'" effect="dark">
+                {{ backendStatus.connected ? '正常' : '离线' }}
+              </el-tag>
             </div>
 
             <div class="status-item">
@@ -524,8 +535,14 @@
                 <el-icon><Cpu /></el-icon>
                 <span>模型状态</span>
               </div>
-              <el-tag :type="modelLoaded ? 'success' : 'warning'" effect="dark">
-                {{ modelLoaded ? '已加载' : '未加载' }}
+              <el-tag 
+                :type="!backendStatus.connected ? 'danger' : (modelLoaded ? 'success' : 'warning')" 
+                effect="dark"
+              >
+                {{ 
+                  !backendStatus.connected ? '后端离线' : 
+                  modelLoaded ? '已加载' : '未加载'
+                }}
               </el-tag>
             </div>
 
@@ -618,7 +635,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
@@ -659,8 +676,16 @@ const deviceInfo = ref({
     pytorchVersion: ''
 })
 
+// 添加后端连接状态
+const backendStatus = ref({
+    connected: false,
+    lastChecked: null,
+    error: null
+})
+
 const loadingDevice = ref(false)
 const showAdvanced = ref(false)
+let backendCheckInterval = null
 
 // ==================== 方法 ====================
 
@@ -705,10 +730,64 @@ console.log('🔧 API基础地址:', API_BASE)
 
 // 修改所有axios请求：
 // 1. 修改 loadDeviceInfo 函数
+// 检查后端连接状态
+const checkBackendStatus = async () => {
+    try {
+        const res = await axios.get(`${API_BASE}/api/health`, {
+            timeout: 3000
+        })
+        if (res.data.status === 'healthy') {
+            backendStatus.value = {
+                connected: true,
+                lastChecked: new Date(),
+                error: null
+            }
+            // 更新模型加载状态
+            modelLoaded.value = res.data.model_loaded || false
+            console.log('✅ 后端连接正常')
+            return true
+        } else {
+            throw new Error('后端服务不健康')
+        }
+    } catch (err) {
+        console.error('❌ 后端连接失败:', err)
+        backendStatus.value = {
+            connected: false,
+            lastChecked: new Date(),
+            error: err.message
+        }
+        // 后端离线时，模型状态也视为未加载
+        modelLoaded.value = false
+        
+        // 显示错误提示
+        ElNotification({
+            title: '后端连接失败',
+            message: '无法连接到检测服务，请检查后端是否运行',
+            type: 'error',
+            duration: 5000
+        })
+        return false
+    }
+}
+
 // 加载设备信息
 const loadDeviceInfo = async () => {
     loadingDevice.value = true
     try {
+        // 先检查后端连接
+        const isConnected = await checkBackendStatus()
+        if (!isConnected) {
+            // 后端未连接，使用默认值
+            deviceInfo.value = {
+                hasGpu: false,
+                currentDevice: 'cpu',
+                gpuName: '',
+                devices: [{ type: 'CPU', name: 'CPU', available: true }],
+                pytorchVersion: '未知'
+            }
+            return
+        }
+        
         const res = await axios.get(`${API_BASE}/api/device_info`, {
             timeout: 5000
         })
@@ -859,6 +938,10 @@ onMounted(async () => {
     console.log('🔧 API_BASE:', API_BASE)
 
     try {
+        // 先检查后端连接状态
+        await checkBackendStatus()
+        console.log('✅ 后端连接状态检查完成')
+        
         // 先加载模型列表
         await loadModelList()
         console.log('✅ 模型列表加载完成')
@@ -873,8 +956,21 @@ onMounted(async () => {
 
         detectionCount.value = localStorage.getItem('detectionCount') || 0
         console.log('🎯 初始化完成')
+        
+        // 定期检查后端连接状态（每10秒）
+        backendCheckInterval = setInterval(async () => {
+            await checkBackendStatus()
+        }, 10000)
+        console.log('🔄 已启动后端连接定期检查')
     } catch (error) {
         console.error('❌ 初始化失败:', error)
+    }
+})
+
+onUnmounted(() => {
+    if (backendCheckInterval) {
+        clearInterval(backendCheckInterval)
+        console.log('🔄 已停止后端连接定期检查')
     }
 })
 
@@ -882,6 +978,15 @@ onMounted(async () => {
 // 加载模型列表
 const loadModelList = async () => {
   try {
+    // 先检查后端连接
+    const isConnected = await checkBackendStatus()
+    if (!isConnected) {
+      modelList.value = ['best.pt']
+      selectedModel.value = 'best.pt'
+      modelInfo.value = 'best.pt (默认)'
+      return
+    }
+    
     const res = await axios.get(`${API_BASE}/api/models`)
     modelList.value = res.data
     if (modelList.value.length > 0) {
@@ -1091,6 +1196,13 @@ const viewDefectDetail = (defect) => {
 const detectImage = async () => {
   if (!selectedFile.value) {
     error.value = '请先选择一张图片'
+    return
+  }
+
+  // 检查后端连接状态
+  const isConnected = await checkBackendStatus()
+  if (!isConnected) {
+    error.value = '后端服务未连接，请检查后端是否运行'
     return
   }
 

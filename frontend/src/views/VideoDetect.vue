@@ -73,12 +73,92 @@
               />
             </el-select>
             <div class="model-info">
-              <el-tag type="success" size="large">
-                <el-icon><SuccessFilled /></el-icon>
-                已加载: {{ modelInfo }}
+              <el-tag 
+                :type="!backendStatus.connected ? 'danger' : (modelLoaded ? 'success' : 'warning')" 
+                size="large"
+              >
+                <el-icon>
+                  <component :is="!backendStatus.connected ? 'WarningFilled' : (modelLoaded ? 'SuccessFilled' : 'WarningFilled')" />
+                </el-icon>
+                {{ 
+                  !backendStatus.connected ? '未连接' : 
+                  modelLoaded ? `已加载: ${modelInfo}` : '未加载'
+                }}
               </el-tag>
             </div>
           </div>
+        </el-card>
+
+        <!-- 设备选择 -->
+        <el-card class="config-card" shadow="hover">
+            <template #header>
+                <div class="card-header">
+                    <el-icon><Cpu /></el-icon>
+                    <span>设备选择</span>
+                </div>
+            </template>
+            <div class="device-selector">
+                <!-- 设备检测状态 -->
+                <!-- 在设备检测状态部分添加空值检查 -->
+                <div class="device-status" v-if="deviceInfo">
+                    <!-- 设备状态 -->
+                    <el-tag :type="deviceInfo.hasGpu ? 'success' : 'warning'" size="large">
+                        <el-icon><Cpu /></el-icon>
+                        {{ deviceInfo.currentDevice || 'CPU' }}
+                    </el-tag>
+                    <p class="device-desc" v-if="deviceInfo.hasGpu">
+                        🎮 GPU可用: {{ deviceInfo.gpuName }}
+                    </p>
+                    <p class="device-desc" v-else>
+                        ⚙️ 仅CPU可用
+                    </p>
+                </div>
+
+                <!-- 设备选择 -->
+                <!-- 修改设备选项部分，添加空值检查 -->
+                <div class="device-options">
+                    <el-radio-group v-model="selectedDevice" @change="onDeviceChange">
+                        <el-radio label="auto" border size="large">
+                            <span class="device-option">
+                                <el-icon><MagicStick /></el-icon>
+                                自动选择
+                            </span>
+                        </el-radio>
+                        <el-radio label="cpu" border size="large" :disabled="loadingDevice">
+                            <span class="device-option">
+                                <el-icon><Cpu /></el-icon>
+                                CPU模式
+                            </span>
+                        </el-radio>
+                        <el-radio label="gpu" border size="large"
+                                  :disabled="loadingDevice || !(deviceInfo && deviceInfo.hasGpu)">
+                            <span class="device-option">
+                                <el-icon><VideoPlay /></el-icon>
+                                GPU加速
+                            </span>
+                            <el-tooltip v-if="deviceInfo && !deviceInfo.hasGpu"
+                                        content="未检测到GPU"
+                                        placement="top">
+                                <el-icon class="warning-icon"><Warning /></el-icon>
+                            </el-tooltip>
+                        </el-radio>
+                    </el-radio-group>
+
+                    <!-- 强制CPU选项 -->
+                    <div class="option-item" v-if="deviceInfo && deviceInfo.hasGpu">
+                        <el-divider content-position="left">高级选项</el-divider>
+                        <el-switch v-model="forceCpu" size="large" @change="onForceCpuChange">
+                            <template #prefix>
+                                <el-icon><Cpu /></el-icon>
+                            </template>
+                            <template #default>
+                                强制CPU模式
+                            </template>
+                        </el-switch>
+                        <p class="option-desc">当GPU内存不足时启用</p>
+                    </div>
+                </div>
+            </div>
         </el-card>
 
         <!-- 参数配置 -->
@@ -142,7 +222,24 @@
             <div class="control-item">
               <div class="control-label">
                 <el-icon><VideoCamera /></el-icon>
-                <span>摄像头选择</span>
+                <span>摄像头来源</span>
+              </div>
+              <el-radio-group v-model="cameraSource" size="large" class="camera-source-radio">
+                <el-radio-button label="server">
+                  <el-icon><Server /></el-icon>
+                  服务器摄像头
+                </el-radio-button>
+                <el-radio-button label="local">
+                  <el-icon><Monitor /></el-icon>
+                  本地摄像头
+                </el-radio-button>
+              </el-radio-group>
+            </div>
+
+            <div class="control-item" v-if="cameraSource === 'server'">
+              <div class="control-label">
+                <el-icon><VideoCamera /></el-icon>
+                <span>服务器摄像头选择</span>
               </div>
               <el-select
                 v-model="selectedCamera"
@@ -365,8 +462,41 @@
 
           <div class="camera-preview">
             <div v-if="cameraActive" class="camera-stream">
-              <div class="camera-frame">
+              <!-- 服务器摄像头 -->
+              <div v-if="cameraSource === 'server'" class="camera-frame">
                 <img :src="cameraStreamUrl" alt="摄像头画面" class="camera-feed" />
+                <div class="camera-overlay">
+                  <div class="camera-status">
+                    <el-icon><VideoCamera /></el-icon>
+                    <span>实时检测中...</span>
+                  </div>
+                  <div class="camera-stats">
+                    <div class="stat-item">
+                      <el-icon><Timer /></el-icon>
+                      <span>{{ formatRunTime }}</span>
+                    </div>
+                    <div class="stat-item">
+                      <el-icon><DataLine /></el-icon>
+                      <span>实时帧率: {{ estimatedFps }} FPS</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 本地摄像头 -->
+              <div v-else class="camera-frame">
+                <video
+                  ref="localVideoRef"
+                  autoplay
+                  playsinline
+                  muted
+                  class="camera-feed"
+                ></video>
+                <canvas
+                  ref="localCanvasRef"
+                  class="camera-feed"
+                  style="display: none"
+                ></canvas>
                 <div class="camera-overlay">
                   <div class="camera-status">
                     <el-icon><VideoCamera /></el-icon>
@@ -397,7 +527,7 @@
                 </div>
                 <div class="placeholder-tips">
                   <el-alert title="使用提示" type="info" :closable="false">
-                    <ul class="tips-list">
+                    <ul class="tips-list" style="color: #333;">
                       <li>确保摄像头已正确连接</li>
                       <li>在光线良好的环境下检测效果更佳</li>
                       <li>实时检测会持续处理摄像头画面</li>
@@ -431,7 +561,7 @@
                 </div>
                 <div class="comparison-video">
                   <video
-                    :src="`http://localhost:5000${detectionResult.video_url}`"
+                    :src="`${API_BASE}${detectionResult.video_url}`"
                     controls
                     class="result-video"
                   ></video>
@@ -450,7 +580,7 @@
                 </div>
                 <div class="comparison-video">
                   <video
-                    :src="`http://localhost:5000${detectionResult.processed_video_url}`"
+                    :src="`${API_BASE}${detectionResult.processed_video_url}`"
                     controls
                     class="result-video"
                   ></video>
@@ -620,7 +750,9 @@
                 <el-icon><Connection /></el-icon>
                 <span>后端连接</span>
               </div>
-              <el-tag type="success" effect="dark">正常</el-tag>
+              <el-tag :type="backendStatus.connected ? 'success' : 'danger'" effect="dark">
+                {{ backendStatus.connected ? '正常' : '离线' }}
+              </el-tag>
             </div>
 
             <div class="status-item">
@@ -628,8 +760,14 @@
                 <el-icon><Cpu /></el-icon>
                 <span>模型状态</span>
               </div>
-              <el-tag :type="modelLoaded ? 'success' : 'warning'" effect="dark">
-                {{ modelLoaded ? '已加载' : '未加载' }}
+              <el-tag 
+                :type="!backendStatus.connected ? 'danger' : (modelLoaded ? 'success' : 'warning')" 
+                effect="dark"
+              >
+                {{ 
+                  !backendStatus.connected ? '后端离线' : 
+                  modelLoaded ? '已加载' : '未加载'
+                }}
               </el-tag>
             </div>
 
@@ -660,8 +798,13 @@
             <div v-else class="record-list">
               <div v-for="(record, index) in videoRecords" :key="index" class="record-item">
                 <div class="record-header">
-                  <el-icon><VideoCamera /></el-icon>
+                  <el-icon>
+                    <component :is="record.type === 'video' ? 'VideoCamera' : 'Camera'" />
+                  </el-icon>
                   <span class="record-time">{{ record.time }}</span>
+                  <el-tag size="small" :type="record.type === 'video' ? 'primary' : 'success'" class="record-type">
+                    {{ record.type === 'video' ? '视频' : '摄像头' }}
+                  </el-tag>
                 </div>
                 <div class="record-info">
                   <div class="record-name">{{ record.name }}</div>
@@ -669,7 +812,7 @@
                     <el-tag size="small" :type="record.defects > 0 ? 'danger' : 'success'">
                       {{ record.defects }}处缺陷
                     </el-tag>
-                    <span class="record-duration">{{ record.duration }}秒</span>
+                    <span class="record-duration">{{ record.duration }}</span>
                   </div>
                 </div>
               </div>
@@ -755,6 +898,22 @@ const isDragOver = ref(false)
 const modelLoaded = ref(true)
 const videoRecords = ref([])
 
+// 后端连接状态
+const backendStatus = ref({
+    connected: false,
+    lastChecked: null,
+    error: null
+})
+
+// 设备选择相关
+const selectedDevice = ref('auto')
+const forceCpu = ref(false)
+const deviceInfo = ref(null)
+const loadingDevice = ref(false)
+
+// 定时器
+let backendCheckInterval = null
+
 // 摄像头检测相关
 const selectedCamera = ref('0')
 const cameraActive = ref(false)
@@ -764,6 +923,13 @@ const cameraEventSource = ref(null)
 const estimatedFps = ref(0)
 const frameCount = ref(0)
 const lastFrameTime = ref(0)
+
+// 本地摄像头相关
+const cameraSource = ref('server') // 'server' 或 'local'
+const localStream = ref(null)
+const localVideoRef = ref(null)
+const localCanvasRef = ref(null)
+const localCaptureInterval = ref(null)
 
 // ==================== 计算属性 ====================
 const formatRunTime = computed(() => {
@@ -775,10 +941,129 @@ const formatRunTime = computed(() => {
   return `${minutes}分${remainingSeconds}秒`
 })
 
+// ==================== API基础地址 ====================
+const getApiBase = () => {
+  const hostname = window.location.hostname
+  const protocol = window.location.protocol
+
+  // 本地开发环境
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${protocol}//${hostname}:5000`
+  }
+
+  // 内网环境
+  if (hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.')) {
+    return `${protocol}//${hostname}:5000`
+  }
+
+  // 默认使用当前域
+  return `${protocol}//${hostname}${window.location.port ? ':' + window.location.port : ''}`
+}
+
+const API_BASE = getApiBase()
+console.log('🔧 API基础地址:', API_BASE)
+
+// ==================== 后端连接状态检测 ====================
+// 检查后端连接状态
+const checkBackendStatus = async () => {
+    try {
+        const res = await axios.get(`${API_BASE}/api/health`, {
+            timeout: 3000
+        })
+        if (res.data.status === 'healthy') {
+            backendStatus.value = {
+                connected: true,
+                lastChecked: new Date(),
+                error: null
+            }
+            // 更新模型加载状态
+            modelLoaded.value = res.data.model_loaded || false
+            console.log('✅ 后端连接正常')
+            return true
+        } else {
+            throw new Error('后端服务不健康')
+        }
+    } catch (err) {
+        console.error('❌ 后端连接失败:', err)
+        backendStatus.value = {
+            connected: false,
+            lastChecked: new Date(),
+            error: err.message
+        }
+        // 后端离线时，模型状态也视为未加载
+        modelLoaded.value = false
+        
+        // 显示错误提示
+        ElNotification({
+            title: '后端连接失败',
+            message: '无法连接到检测服务，请检查后端是否运行',
+            type: 'error',
+            duration: 5000
+        })
+        return false
+    }
+}
+
+// 加载设备信息
+const loadDeviceInfo = async () => {
+    loadingDevice.value = true
+    try {
+        // 先检查后端连接
+        const isConnected = await checkBackendStatus()
+        if (!isConnected) {
+            // 后端未连接，使用默认值
+            deviceInfo.value = {
+                hasGpu: false,
+                currentDevice: 'CPU',
+                gpuName: '',
+                gpuMemory: 0
+            }
+            return
+        }
+        
+        const res = await axios.get(`${API_BASE}/api/device_info`, {
+            timeout: 5000
+        })
+        if (res.data.success) {
+            deviceInfo.value = {
+                hasGpu: res.data.cuda_available || false,
+                currentDevice: res.data.current_device || 'CPU',
+                gpuName: res.data.devices?.find(d => d.type === 'GPU')?.name || '',
+                gpuMemory: 0
+            }
+            console.log('✅ 加载设备信息成功:', deviceInfo.value)
+        } else {
+            throw new Error('获取设备信息失败')
+        }
+    } catch (err) {
+        console.error('❌ 加载设备信息失败:', err)
+        deviceInfo.value = {
+            hasGpu: false,
+            currentDevice: 'CPU',
+            gpuName: '',
+            gpuMemory: 0
+        }
+    } finally {
+        loadingDevice.value = false
+    }
+}
+
 // ==================== 生命周期钩子 ====================
 onMounted(async () => {
+  // 检查后端连接状态
+  await checkBackendStatus()
+  // 加载设备信息
+  await loadDeviceInfo()
+  // 加载模型列表
   await loadModelList()
+  // 加载视频记录
   await loadVideoRecords()
+  
+  // 定期检查后端状态（每10秒）
+  backendCheckInterval = setInterval(async () => {
+    await checkBackendStatus()
+  }, 10000)
+  
   window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
@@ -788,6 +1073,10 @@ onUnmounted(() => {
   }
   if (cameraEventSource.value) {
     cameraEventSource.value.close()
+  }
+  // 清除定时器
+  if (backendCheckInterval) {
+    clearInterval(backendCheckInterval)
   }
   window.removeEventListener('beforeunload', handleBeforeUnload)
 })
@@ -802,7 +1091,7 @@ const handleBeforeUnload = () => {
 // 加载模型列表
 const loadModelList = async () => {
   try {
-    const res = await axios.get('http://localhost:5000/api/models')
+    const res = await axios.get(`${API_BASE}/api/models`)
     modelList.value = res.data
     if (modelList.value.length > 0) {
       selectedModel.value = modelList.value[0]
@@ -819,17 +1108,18 @@ const loadModelList = async () => {
 // 加载视频记录
 const loadVideoRecords = async () => {
   try {
-    const res = await axios.get('http://localhost:5000/api/history')
-    // 过滤出视频检测记录
+    const res = await axios.get(`${API_BASE}/api/history`)
+    // 过滤出视频和摄像头检测记录
     const videoRecordsData = res.data
-      .filter(record => record.detection_type === 'video')
+      .filter(record => record.detection_type === 'video' || record.detection_type === 'camera')
       .slice(0, 5) // 只取最近的5条
 
     videoRecords.value = videoRecordsData.map(record => ({
-      name: record.filename,
+      name: record.filename || `摄像头检测 ${record.id}`,
       time: record.detect_time,
       defects: record.total_objects || 0,
-      duration: record.duration ? `${record.duration.toFixed(1)}` : '--'
+      duration: record.duration ? `${record.duration.toFixed(1)}秒` : '--',
+      type: record.detection_type
     }))
   } catch (err) {
     console.error('加载视频记录失败:', err)
@@ -840,6 +1130,46 @@ const loadVideoRecords = async () => {
 const onModelChange = () => {
   modelInfo.value = selectedModel.value
   modelLoaded.value = true
+}
+
+// 设备变更处理
+const onDeviceChange = (deviceType) => {
+    if (deviceType === 'gpu' && !deviceInfo.value?.hasGpu) {
+        ElNotification({
+            title: 'GPU不可用',
+            message: '未检测到可用的GPU设备',
+            type: 'warning',
+            duration: 3000
+        })
+        selectedDevice.value = 'cpu'
+        return
+    }
+    switchDevice(deviceType)
+}
+
+// 强制CPU变更处理
+const onForceCpuChange = (value) => {
+    if (value) {
+        ElNotification({
+            title: '强制CPU模式',
+            message: '已启用强制CPU模式，将忽略GPU设置',
+            type: 'info',
+            duration: 3000
+        })
+    }
+}
+
+// 切换设备
+const switchDevice = (deviceType) => {
+    console.log('切换设备:', deviceType)
+    // 这里可以添加设备切换的逻辑
+    // 例如，通知用户设备切换成功
+    ElNotification({
+        title: '设备切换成功',
+        message: `已切换到${deviceType === 'auto' ? '自动选择' : deviceType === 'gpu' ? 'GPU加速' : 'CPU模式'}`,
+        type: 'success',
+        duration: 2000
+    })
 }
 
 // 拖拽相关事件
@@ -963,17 +1293,26 @@ const detectVideo = async () => {
     return
   }
 
+  // 检查后端连接状态
+  const isConnected = await checkBackendStatus()
+  if (!isConnected) {
+    videoError.value = '后端服务未连接，请检查后端是否运行'
+    return
+  }
+
   const formData = new FormData()
   formData.append('video', selectedVideo.value)
   formData.append('model', selectedModel.value)
   formData.append('conf', confThreshold.value.toString())
   formData.append('iou', iouThreshold.value.toString())
+  formData.append('use_gpu', (selectedDevice.value === 'gpu' || selectedDevice.value === 'auto').toString())
+  formData.append('force_cpu', forceCpu.value.toString())
 
   videoLoading.value = true
   videoError.value = ''
 
   try {
-    const response = await axios.post('http://localhost:5000/api/detect_video', formData, {
+    const response = await axios.post(`${API_BASE}/api/detect_video`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 300000 // 5分钟超时
     })
@@ -987,7 +1326,7 @@ const detectVideo = async () => {
 
       ElNotification({
         title: '检测成功',
-        message: `视频处理完成，发现${response.data.total_detections}处缺陷`,
+        message: `视频处理完成，发现${response.data.total_detections}处缺陷，使用设备: ${response.data.device_used || 'CPU'}`,
         type: 'success',
         duration: 5000
       })
@@ -1011,7 +1350,7 @@ const detectVideo = async () => {
 // 下载视频
 const downloadVideo = (videoUrl) => {
   if (!videoUrl) return
-  const fullUrl = `http://localhost:5000${videoUrl}`
+  const fullUrl = `${API_BASE}${videoUrl}`
   window.open(fullUrl, '_blank')
 }
 
@@ -1076,76 +1415,146 @@ const exportVideoReport = async () => {
 // ==================== 摄像头功能 ====================
 // 启动摄像头
 const startCamera = async () => {
-  try {
-    const response = await axios.post('http://localhost:5000/api/camera/start', {
-      camera_id: parseInt(selectedCamera.value)
+  // 检查后端连接状态
+  const isConnected = await checkBackendStatus()
+  if (!isConnected) {
+    ElNotification({
+      title: '启动失败',
+      message: '后端服务未连接，请检查后端是否运行',
+      type: 'error',
+      duration: 5000
     })
+    return
+  }
 
-    if (response.data.success) {
+  try {
+    if (cameraSource.value === 'server') {
+      // 服务器摄像头
+      const response = await axios.post(`${API_BASE}/api/camera/start`, {
+        camera_id: parseInt(selectedCamera.value),
+        use_gpu: (selectedDevice.value === 'gpu' || selectedDevice.value === 'auto'),
+        force_cpu: forceCpu.value
+      })
+
+      if (response.data.success) {
+        cameraActive.value = true
+        cameraStartTime.value = Date.now()
+        frameCount.value = 0
+        lastFrameTime.value = Date.now()
+
+        // 开始接收视频流
+        startCameraStream()
+
+        ElNotification({
+          title: '摄像头启动成功',
+          message: `服务器摄像头 ${selectedCamera.value} 已启动`,
+          type: 'success',
+          duration: 3000
+        })
+      } else {
+        ElNotification({
+          title: '启动摄像头失败',
+          message: response.data.message,
+          type: 'error',
+          duration: 3000
+        })
+      }
+    } else {
+      // 本地摄像头
+      // 请求摄像头权限
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false
+      })
+
+      // 显示本地摄像头流
+      if (localVideoRef.value) {
+        localVideoRef.value.srcObject = stream
+        localStream.value = stream
+      }
+
       cameraActive.value = true
       cameraStartTime.value = Date.now()
       frameCount.value = 0
       lastFrameTime.value = Date.now()
 
-      // 开始接收视频流
-      startCameraStream()
+      // 开始本地摄像头检测
+      startLocalCameraStream()
 
       ElNotification({
         title: '摄像头启动成功',
-        message: `摄像头 ${selectedCamera.value} 已启动`,
+        message: '本地摄像头已启动',
         type: 'success',
-        duration: 3000
-      })
-    } else {
-      ElNotification({
-        title: '启动摄像头失败',
-        message: response.data.message,
-        type: 'error',
         duration: 3000
       })
     }
   } catch (err) {
     console.error('启动摄像头失败:', err)
-    ElNotification({
-      title: '启动摄像头失败',
-      message: '请检查后端服务是否正常运行',
-      type: 'error',
-      duration: 3000
-    })
+    if (cameraSource.value === 'local') {
+      ElNotification({
+        title: '启动摄像头失败',
+        message: '无法访问本地摄像头，请检查权限设置',
+        type: 'error',
+        duration: 3000
+      })
+    } else {
+      ElNotification({
+        title: '启动摄像头失败',
+        message: '请检查后端服务是否正常运行',
+        type: 'error',
+        duration: 3000
+      })
+    }
   }
 }
 
 // 停止摄像头
 const stopCamera = async () => {
   try {
-    const response = await axios.post('http://localhost:5000/api/camera/stop')
+    if (cameraSource.value === 'server') {
+      // 停止服务器摄像头
+      const response = await axios.post(`${API_BASE}/api/camera/stop`)
 
-    if (response.data.success) {
-      cameraActive.value = false
-      cameraStreamUrl.value = ''
+      if (response.data.success) {
+        cameraActive.value = false
+        cameraStreamUrl.value = ''
 
-      // 关闭EventSource
-      if (cameraEventSource.value) {
-        cameraEventSource.value.close()
-        cameraEventSource.value = null
+        // 关闭EventSource
+        if (cameraEventSource.value) {
+          cameraEventSource.value.close()
+          cameraEventSource.value = null
+        }
       }
-
-      ElNotification({
-        title: '摄像头已停止',
-        message: '实时检测已结束',
-        type: 'info',
-        duration: 3000
-      })
+    } else {
+      // 停止本地摄像头
+      if (localStream.value) {
+        localStream.value.getTracks().forEach(track => track.stop())
+        localStream.value = null
+      }
+      if (localCaptureInterval.value) {
+        clearInterval(localCaptureInterval.value)
+        localCaptureInterval.value = null
+      }
+      cameraActive.value = false
     }
+
+    ElNotification({
+      title: '摄像头已停止',
+      message: '实时检测已结束',
+      type: 'info',
+      duration: 3000
+    })
   } catch (err) {
     console.error('停止摄像头失败:', err)
+    // 即使失败也设置为非活动状态
+    cameraActive.value = false
   }
 }
 
-// 开始摄像头流
+// 开始服务器摄像头流
 const startCameraStream = () => {
   // 使用EventSource接收服务器发送的事件流
-  cameraEventSource.value = new EventSource('http://localhost:5000/api/camera/stream')
+  cameraEventSource.value = new EventSource(`${API_BASE}/api/camera/stream`)
 
   cameraEventSource.value.onmessage = (event) => {
     // 更新视频流URL
@@ -1170,6 +1579,57 @@ const startCameraStream = () => {
       stopCamera()
     }
   }
+}
+
+// 开始本地摄像头流
+const startLocalCameraStream = () => {
+  // 定期捕获本地摄像头帧并发送到后端
+  localCaptureInterval.value = setInterval(async () => {
+    if (!localVideoRef.value || !localCanvasRef.value) return
+
+    try {
+      // 捕获视频帧到canvas
+      const video = localVideoRef.value
+      const canvas = localCanvasRef.value
+      const ctx = canvas.getContext('2d')
+
+      // 设置canvas尺寸
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+
+      // 绘制视频帧
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+      // 将canvas转换为base64
+      const base64Image = canvas.toDataURL('image/jpeg', 0.8)
+      
+      // 发送到后端进行检测
+      const response = await axios.post(`${API_BASE}/api/camera/detect_frame`, {
+        image: base64Image.split(',')[1], // 移除data:image/jpeg;base64,前缀
+        use_gpu: (selectedDevice.value === 'gpu' || selectedDevice.value === 'auto'),
+        force_cpu: forceCpu.value
+      })
+
+      if (response.data.success) {
+        // 更新视频流URL为检测结果
+        cameraStreamUrl.value = `data:image/jpeg;base64,${response.data.image}`
+
+        // 计算帧率
+        frameCount.value++
+        const now = Date.now()
+        const elapsed = now - lastFrameTime.value
+
+        // 每1秒更新一次帧率
+        if (elapsed >= 1000) {
+          estimatedFps.value = Math.round((frameCount.value * 1000) / elapsed)
+          frameCount.value = 0
+          lastFrameTime.value = now
+        }
+      }
+    } catch (err) {
+      console.error('本地摄像头检测失败:', err)
+    }
+  }, 100) // 每100ms捕获一帧，约10FPS
 }
 
 // ==================== 导航功能 ====================

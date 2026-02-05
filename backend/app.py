@@ -38,6 +38,16 @@ def get_available_device():
         print(f"⚠️ 设备检测失败: {e}，使用CPU")
         return "cpu"
 
+
+def select_device(use_gpu=True, force_cpu=False):
+    """根据参数选择设备"""
+    import torch
+    if force_cpu:
+        return torch.device('cpu')
+    if use_gpu and torch.cuda.is_available():
+        return torch.device('cuda:0')
+    return torch.device('cpu')
+
 # 全局设备变量
 DETECTION_DEVICE = None  # 初始为None，在运行时确定
 
@@ -1233,6 +1243,74 @@ def camera_stream():
                 pass
 
     return Response(generate(), mimetype='text/event-stream')
+
+
+@app.route('/api/camera/detect_frame', methods=['POST'])
+def detect_frame():
+    """处理本地摄像头帧"""
+    try:
+        import base64
+        import numpy as np
+        import cv2
+
+        data = request.json
+        image_base64 = data.get('image')
+        use_gpu = data.get('use_gpu', True)
+        force_cpu = data.get('force_cpu', False)
+
+        if not image_base64:
+            return jsonify({"success": False, "message": "未收到图像数据"}), 400
+
+        # 解码base64图像
+        image_data = base64.b64decode(image_base64)
+        np_arr = np.frombuffer(image_data, np.uint8)
+        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+        if frame is None:
+            return jsonify({"success": False, "message": "图像解码失败"}), 400
+
+        # 选择设备
+        device = select_device(use_gpu=use_gpu, force_cpu=force_cpu)
+
+        # 运行检测
+        results = current_model(frame, device=device, verbose=False)
+
+        # 处理检测结果
+        detections = []
+        total_detections = 0
+
+        for result in results:
+            for box in result.boxes:
+                class_id = int(box.cls[0])
+                class_name = result.names[class_id]
+                confidence = float(box.conf[0])
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+
+                detections.append({
+                    "class": class_name,
+                    "confidence": confidence,
+                    "box": [x1, y1, x2, y2]
+                })
+                total_detections += 1
+
+        # 绘制检测结果
+        annotated_frame = results[0].plot()
+
+        # 将结果编码为base64
+        _, buffer = cv2.imencode('.jpg', annotated_frame)
+        result_base64 = base64.b64encode(buffer).decode('utf-8')
+
+        return jsonify({
+            "success": True,
+            "image": result_base64,
+            "detections": detections,
+            "total_detections": total_detections,
+            "device_used": device.type
+        })
+
+    except Exception as e:
+        app.logger.error(f"处理本地摄像头帧失败: {e}")
+        return jsonify({"success": False, "message": f"处理失败: {str(e)}"}), 500
 
 
 # 在 app.py 中修改 /api/history 接口
