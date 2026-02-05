@@ -857,7 +857,7 @@
     <div class="footer">
       <div class="footer-content">
         <div class="footer-info">
-          <p>© 2024 绝缘子缺陷检测系统 v3.0</p>
+          <p>© 20206 绝缘子缺陷检测系统 v1.1.0</p>
           <p>视频检测模块 | 基于 YOLOv11 深度学习模型</p>
         </div>
         <div class="footer-contact">
