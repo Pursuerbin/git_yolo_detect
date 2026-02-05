@@ -10,10 +10,20 @@ import os
 import torch
 from dotenv import load_dotenv
 
+# 加载环境变量
+load_dotenv()
+
 # 设备选择函数
 def get_available_device():
     """获取可用设备，优先使用GPU"""
     try:
+        # 从环境变量获取GPU使用策略
+        use_gpu = os.getenv('USE_GPU', 'auto').lower()
+        
+        if use_gpu == 'false':
+            print("⚠️ 强制使用CPU模式")
+            return "cpu"
+        
         if torch.cuda.is_available():
             device_name = torch.cuda.get_device_name(0)
             device_count = torch.cuda.device_count()
@@ -88,24 +98,9 @@ app = Flask(__name__)
 #     ], supports_credentials=True)
 
 # ==================== CORS 配置 ====================
-# 简化的CORS配置
-allowed_origins = [
-    # 本地开发
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-
-    # 局域网地址 - 修改为新服务器的IP地址
-    "http://192.168.244.1:5173",     # 新服务器ip修改这里
-    "http://192.168.219.1:5173",
-    "http://192.168.1.11:5173",
-
-    # Flask后端自身
-    "http://localhost:5000",
-    "http://127.0.0.1:5000",
-    "http://192.168.244.1:5000",
-    "http://192.168.219.1:5000",
-    "http://192.168.1.11:5000",
-]
+# 从环境变量读取允许的源
+allowed_origins_env = os.getenv('ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173')
+allowed_origins = allowed_origins_env.split(',')
 
 # 根据环境变量配置CORS
 if os.environ.get('FLASK_ENV') == 'development':
@@ -117,32 +112,34 @@ else:
 # ==================== 配置参数 ====================
 # 数据库配置
 DB_CONFIG = {
-    'host': 'localhost',      # 改为新服务器的MySQL主机地址
-    'user': 'root',           # MySQL用户名
-    'password': '123456',     # 改为新服务器的MySQL密码
-    'database': 'insulator_detection'  # 数据库名
+    'host': os.getenv('DB_HOST', 'localhost'),      # 从环境变量获取
+    'user': os.getenv('DB_USER', 'root'),           # 从环境变量获取
+    'password': os.getenv('DB_PASSWORD', '123456'), # 从环境变量获取
+    'database': os.getenv('DB_NAME', 'insulator_detection')  # 从环境变量获取
 }
 
 # 文件路径配置
-UPLOAD_FOLDER = 'uploads'
-RESULT_FOLDER = 'results'
-VIDEO_FOLDER = 'videos'
-MODEL_FOLDER = 'models'
+UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
+RESULT_FOLDER = os.getenv('RESULT_FOLDER', 'results')
+VIDEO_FOLDER = os.getenv('VIDEO_FOLDER', 'videos')
+MODEL_FOLDER = os.getenv('MODEL_FOLDER', 'models')
 
 # 确保目录存在
 for folder in [UPLOAD_FOLDER, RESULT_FOLDER, VIDEO_FOLDER, MODEL_FOLDER]:
     os.makedirs(folder, exist_ok=True)
 
 # 允许的文件扩展名
-ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg'}
-ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
+image_extensions = os.getenv('ALLOWED_IMAGE_EXTENSIONS', 'png,jpg,jpeg')
+video_extensions = os.getenv('ALLOWED_VIDEO_EXTENSIONS', 'mp4,avi,mov,mkv')
+ALLOWED_IMAGE_EXTENSIONS = set(image_extensions.split(','))
+ALLOWED_VIDEO_EXTENSIONS = set(video_extensions.split(','))
 ALLOWED_EXTENSIONS = ALLOWED_IMAGE_EXTENSIONS | ALLOWED_VIDEO_EXTENSIONS
 
 # ==================== 端口设置 ====================
 # 在配置参数部分添加
 DEFAULT_PORT = 5000
 # 允许从环境变量获取端口
-APP_PORT = int(os.environ.get('FLASK_PORT', DEFAULT_PORT))
+APP_PORT = int(os.environ.get('SERVER_PORT', DEFAULT_PORT))
 
 # ==================== 端口自动选择 ====================
 def find_available_port(start_port=5000, max_attempts=10):
@@ -180,15 +177,7 @@ class_mapping = {
     'damage': '破损'
 }
 
-# 配置日志
-logging.basicConfig(level=logging.INFO)
-handler = RotatingFileHandler('app.log', maxBytes=10000, backupCount=3)
-handler.setLevel(logging.INFO)
-formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-handler.setFormatter(formatter)
-app.logger.addHandler(handler)
+# 日志配置将在setup_logging()函数中处理
 
 # 错误处理装饰器
 def handle_db_error(func):
@@ -207,24 +196,14 @@ def handle_db_error(func):
 # ==================== 日志配置 ====================
 def setup_logging():
     """配置日志系统 - 确保只初始化一次"""
-    # 检查是否已经配置过日志
-    if app.logger.handlers:
-        return app.logger
-
-    # 创建日志目录
-    LOG_FOLDER = 'logs'
+    # 从环境变量读取日志配置
+    LOG_FOLDER = os.getenv('LOG_FOLDER', 'logs')
     os.makedirs(LOG_FOLDER, exist_ok=True)
 
-    # 清除所有现有处理器
-    app.logger.handlers.clear()
-
-    # 配置日志格式
+    # 配置日志格式 - 使用更简洁的格式
     formatter = logging.Formatter(
-        '[%(asctime)s] %(levelname)s in %(name)s: %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S,%f'
+        '%(levelname)s:%(name)s:%(message)s',
     )
-
-    formatter.default_msec_format = '%s.%03d'  # 毫秒格式
 
     # 文件日志（按大小轮转）
     file_handler = RotatingFileHandler(
@@ -236,28 +215,24 @@ def setup_logging():
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.INFO)
 
-    # 控制台日志
+    # 控制台日志 - 使用相同的格式
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
     console_handler.setLevel(logging.INFO)
 
     # 设置日志器级别并添加处理器
     app.logger.setLevel(logging.INFO)
+    
+    # 清除现有处理器并添加新的
+    app.logger.handlers = []
+    app.logger.addHandler(file_handler)
+    app.logger.addHandler(console_handler)
 
-    # 只添加一次处理器
-    if not app.logger.handlers:
-        app.logger.addHandler(file_handler)
-        app.logger.addHandler(console_handler)
-
-    # 禁用werkzeug的默认日志，只记录错误
+    # 让werkzeug使用默认的日志配置，以便看到完整的服务器启动信息
     werkzeug_logger = logging.getLogger('werkzeug')
-    werkzeug_logger.setLevel(logging.ERROR)
-    # 移除werkzeug的默认处理器
-    werkzeug_logger.handlers.clear()
-
-    # 添加我们自己的处理器到werkzeug（可选）
-    werkzeug_logger.addHandler(file_handler)
-    werkzeug_logger.addHandler(console_handler)
+    werkzeug_logger.setLevel(logging.INFO)
+    # 移除我们添加的处理器，让Werkzeug使用默认的输出方式
+    werkzeug_logger.handlers = []
 
     return app.logger
 
@@ -793,9 +768,9 @@ def detect():
         return jsonify({"error": "未选择文件"}), 400
 
     # 获取参数
-    model_name = request.form.get('model', 'best.pt')
-    conf_threshold = float(request.form.get('conf', 0.25))
-    iou_threshold = float(request.form.get('iou', 0.45))
+    model_name = request.form.get('model', os.getenv('DEFAULT_MODEL', 'best.pt'))
+    conf_threshold = float(request.form.get('conf', os.getenv('CONF_THRESHOLD', '0.25')))
+    iou_threshold = float(request.form.get('iou', os.getenv('IOU_THRESHOLD', '0.45')))
 
     # 添加GPU调试信息
     import torch
@@ -926,9 +901,9 @@ def detect_video():
         return jsonify({"error": "未选择视频文件"}), 400
 
     # 获取参数
-    model_name = request.form.get('model', 'best.pt')
-    conf_threshold = float(request.form.get('conf', 0.25))
-    iou_threshold = float(request.form.get('iou', 0.45))
+    model_name = request.form.get('model', os.getenv('DEFAULT_MODEL', 'best.pt'))
+    conf_threshold = float(request.form.get('conf', os.getenv('CONF_THRESHOLD', '0.25')))
+    iou_threshold = float(request.form.get('iou', os.getenv('IOU_THRESHOLD', '0.45')))
 
     # 加载模型
     if not load_model(model_name):
@@ -1681,7 +1656,7 @@ if __name__ == '__main__':
         DETECTION_DEVICE = "cuda:0"
     else:
         app.logger.info("[错误]未检测到GPU，使用CPU模式")
-        DETECTION_DEVICE = "[设备]cpu"
+        DETECTION_DEVICE = "cpu"
 
     # 初始化数据库（简化日志）
     try:
@@ -1691,7 +1666,7 @@ if __name__ == '__main__':
         app.logger.error(f"[错误]数据库初始化失败: {e}")
 
     # 加载默认模型
-    default_model = 'best.pt'
+    default_model = os.getenv('DEFAULT_MODEL', 'best.pt')
     model_path = os.path.join(MODEL_FOLDER, default_model)
 
     if os.path.exists(model_path):
@@ -1729,7 +1704,7 @@ if __name__ == '__main__':
 
     app.logger.info("-" * 50)
 
-# ============================ 系统信息 ============================
+    # ============================ 系统信息 ============================
 
     print("\n" + "=" * 50)
     print("🚀 YOLOv11绝缘子缺陷检测系统启动")
@@ -1750,4 +1725,5 @@ if __name__ == '__main__':
     print(f"🔧 检测设备: {DETECTION_DEVICE}")
     print("=" * 50 + "\n")
 
+    # 启动服务器
     app.run(host=host, port=actual_port, debug=False, threaded=True, use_reloader=False)
