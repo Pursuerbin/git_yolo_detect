@@ -194,38 +194,63 @@ npm run build
 
 ## 目录结构
 
+### 前端文件结构
+
+```
+frontend/
+├── src/                 # 源代码
+│   ├── views/           # 页面组件
+│   │   ├── AboutView.vue        # 关于页面
+│   │   ├── HistoryView.vue      # 历史记录页面 - 查看和管理检测记录
+│   │   ├── LoginView.vue        # 登录页面
+│   │   ├── RecordDetailView.vue # 记录详情页面 - 查看检测结果详情
+│   │   ├── RegisterView.vue     # 注册页面
+│   │   ├── UploadView.vue       # 图片上传检测页面 - 上传图片进行缺陷检测
+│   │   └── VideoDetect.vue      # 视频/摄像头检测页面 - 视频文件或实时摄像头检测
+│   ├── components/      # 通用组件
+│   │   ├── __tests__/           # 测试文件
+│   │   ├── icons/               # 图标组件
+│   │   ├── DeviceSelector.vue   # 设备选择组件 - 切换CPU/GPU设备
+│   │   ├── NavBar.vue           # 导航栏组件 - 应用顶部导航
+│   │   └── HelloWorld.vue       # 示例组件
+│   ├── router/          # 路由配置
+│   │   ├── index.js             # 路由配置（JavaScript版本）
+│   │   └── index.ts             # 路由配置（TypeScript版本）
+│   ├── utils/           # 工具函数
+│   │   └── logger.ts            # 日志工具
+│   ├── App.vue          # 应用根组件
+│   └── main.ts          # 应用入口文件
+├── package.json         # 项目配置
+└── vite.config.ts       # Vite配置
+```
+
+### 后端文件结构
+
+```
+backend/
+├── app.py               # 主应用文件 - 核心后端逻辑
+├── requirements.txt     # 依赖文件 - Python包依赖
+├── .env                 # 环境变量 - 配置参数
+├── .env.bak             # 环境变量备份
+├── uploads/             # 上传文件目录 - 存储用户上传的图片/视频
+├── results/             # 检测结果目录 - 存储检测后的结果文件
+└── logs/                # 日志目录 - 存储应用运行日志
+```
+
+### 项目根目录
+
 ```
 git_yolo_detect/
-├── backend/           # 后端代码
-│   ├── app.py         # 主应用文件
-│   ├── requirements.txt # 依赖文件
-│   ├── .env           # 环境变量
-│   ├── .env.bak       # 环境变量备份
-│   ├── uploads/       # 上传文件目录
-│   ├── results/       # 检测结果目录
-├── frontend/          # 前端代码
-│   ├── src/           # 源代码
-│   │   ├── views/     # 页面组件
-│   │   │   ├── AboutView.vue
-│   │   │   ├── HistoryView.vue
-│   │   │   └── LoginView.vue
-│   │   ├── components/ # 通用组件
-│   │   ├── router/    # 路由配置
-│   │   ├── stores/    # 状态管理
-│   │   ├── utils/     # 工具函数
-│   │   ├── config/    # 配置文件
-│   │   ├── styles/    # 样式文件
-│   │   └── assets/    # 静态资源
-│   ├── package.json   # 项目配置
-│   └── vite.config.ts # Vite配置
-├── README.md          # 项目说明
-├── 核心功能模块.md     # 核心功能模块分析
-├── 项目技术分析报告.md # 项目技术分析报告
-├── 绝缘子缺陷检测系统需求文档.md # 需求文档
-├── API接口文档.md     # API接口文档
-├── 数据库设计文档.md   # 数据库设计文档
-├── 架构设计图描述.md   # 架构设计图描述
-└── .gitignore         # Git忽略文件
+├── backend/                    # 后端代码
+├── frontend/                   # 前端代码
+├── README.md                   # 项目说明
+├── 核心功能模块.md              # 核心功能模块分析
+├── 项目技术分析报告.md           # 项目技术分析报告
+├── 绝缘子缺陷检测系统需求文档.md    # 需求文档
+├── API接口文档.md               # API接口文档
+├── 数据库设计文档.md             # 数据库设计文档
+├── 架构设计图描述.md             # 架构设计图描述
+└── .gitignore                  # Git忽略文件
 ```
 
 ## 常见问题
