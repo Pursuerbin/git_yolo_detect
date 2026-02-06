@@ -1170,7 +1170,7 @@ const deleteSelectedRecords = async () => {
 
     try {
       const recordIds = selectedRecords.value.map(r => r.id)
-      const response = await axios.post('http://localhost:5000/api/records/batch_delete', {
+      const response = await axios.post(`${API_BASE}/api/records/batch_delete`, {
         record_ids: recordIds
       })
 
@@ -1295,14 +1295,14 @@ const downloadResult = async (record) => {
     if (record.detection_type === 'image') {
       // 图片检测：下载标注后的结果图
       if (record.result_filename) {
-        downloadUrl = `http://localhost:5000/static/results/${record.result_filename}`
+        downloadUrl = `${API_BASE}/static/results/${record.result_filename}`
         filename = record.result_filename
       } else {
         // 如果数据库中没有存储 result_filename，尝试获取详情
         try {
-          const res = await axios.get(`http://localhost:5000/api/records/${record.id}`)
+          const res = await axios.get(`${API_BASE}/api/records/${record.id}`)
           if (res.data.record.result_filename) {
-            downloadUrl = `http://localhost:5000/static/results/${res.data.record.result_filename}`
+            downloadUrl = `${API_BASE}/static/results/${res.data.record.result_filename}`
             filename = res.data.record.result_filename
           } else {
             throw new Error('未找到结果文件')
@@ -1314,14 +1314,14 @@ const downloadResult = async (record) => {
     } else if (record.detection_type === 'video') {
       // 视频检测：下载处理后的视频
       if (record.processed_video_filename) {
-        downloadUrl = `http://localhost:5000/static/results/${record.processed_video_filename}`
+        downloadUrl = `${API_BASE}/static/results/${record.processed_video_filename}`
         filename = record.processed_video_filename
       } else {
         // 如果数据库中没有存储 processed_video_filename，尝试获取详情
         try {
-          const res = await axios.get(`http://localhost:5000/api/records/${record.id}`)
+          const res = await axios.get(`${API_BASE}/api/records/${record.id}`)
           if (res.data.record.processed_video_path) {
-            downloadUrl = `http://localhost:5000/static/results/${res.data.record.processed_video_path}`
+            downloadUrl = `${API_BASE}/static/results/${res.data.record.processed_video_path}`
             filename = res.data.record.processed_video_path.split('/').pop() || 'processed_video.mp4'
           } else {
             throw new Error('未找到处理后的视频文件')
@@ -1406,7 +1406,7 @@ const exportSingleRecord = async (record) => {
     // 如果没有检测数据，尝试从API获取
     if (detections.length === 0 && record.id) {
       try {
-        const res = await axios.get(`http://localhost:5000/api/records/${record.id}`);
+        const res = await axios.get(`${API_BASE}/api/records/${record.id}`);
         if (res.data && res.data.detections) {
           if (Array.isArray(res.data.detections)) {
             detections = res.data.detections;
@@ -1561,7 +1561,7 @@ const deleteSingleRecord = async (record) => {
     )
 
     // 调用删除API
-    const response = await axios.delete(`http://localhost:5000/api/records/${record.id}`)
+    const response = await axios.delete(`${API_BASE}/api/records/${record.id}`)
 
     if (response.data.success) {
       ElNotification({
@@ -1812,7 +1812,7 @@ const clearAllRecords = async () => {
 
     try {
       // 发送请求到后端API清空所有记录
-      const response = await axios.post('http://localhost:5000/api/records/clear_all')
+      const response = await axios.post(`${API_BASE}/api/records/clear_all`)
 
       loadingInstance.close()
 
@@ -1954,11 +1954,11 @@ const getPreviewImageUrl = (record) => {
   // 确保图片URL始终有效
   try {
     if (record.detection_type === 'image' && record.result_filename) {
-      return `http://localhost:5000/static/results/${record.result_filename}?t=${Date.now()}`;
+      return `${API_BASE}/static/results/${record.result_filename}?t=${Date.now()}`;
     }
 
     if (record.detection_type === 'image') {
-      return `http://localhost:5000/static/uploads/${record.filename}?t=${Date.now()}`;
+      return `${API_BASE}/static/uploads/${record.filename}?t=${Date.now()}`;
     }
 
     // 视频或摄像头检测的预览图
@@ -1972,10 +1972,10 @@ const getPreviewImageUrl = (record) => {
 // 修改 getFullImageUrl 方法
 const getFullImageUrl = (record) => {
   if (record.detection_type === 'image' && record.result_filename) {
-    return `http://localhost:5000/static/results/${record.result_filename}`
+    return `${API_BASE}/static/results/${record.result_filename}`
   }
   if (record.detection_type === 'image') {
-    return `http://localhost:5000/static/uploads/${record.filename}`
+    return `${API_BASE}/static/uploads/${record.filename}`
   }
   return ''
 }
@@ -1983,10 +1983,10 @@ const getFullImageUrl = (record) => {
 // 修改 getFullVideoUrl 方法
 const getFullVideoUrl = (record) => {
   if (record.detection_type === 'video' && record.processed_video_filename) {
-    return `http://localhost:5000/static/results/${record.processed_video_filename}`
+    return `${API_BASE}/static/results/${record.processed_video_filename}`
   }
   if (record.detection_type === 'video' && record.video_path) {
-    return `http://localhost:5000/static/uploads/${record.video_path}`
+    return `${API_BASE}/static/uploads/${record.video_path}`
   }
   return ''
 }

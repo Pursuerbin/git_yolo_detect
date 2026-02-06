@@ -14,7 +14,7 @@ export default defineConfig({
 
     // 解决HMR热更新问题
     hmr: {
-      host: 'localhost',      // 使用localhost进行HMR连接
+      host: process.env.NODE_ENV === 'development' ? 'localhost' : undefined, // 开发环境使用localhost，生产环境自动检测
       port: 5173,
       protocol: 'ws'          // 明确使用WebSocket协议
     },
