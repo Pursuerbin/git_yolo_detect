@@ -1066,14 +1066,74 @@ const exportToPDF = async () => {
 
 const shareRecord = () => {
   const shareUrl = `${window.location.origin}/record/${record.value.id}`
-  navigator.clipboard.writeText(shareUrl).then(() => {
-    ElNotification({
-      title: '复制成功',
-      message: '分享链接已复制到剪贴板',
-      type: 'success',
-      duration: 2000
+  
+  // 尝试使用Clipboard API
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      ElNotification({
+        title: '复制成功',
+        message: '分享链接已复制到剪贴板',
+        type: 'success',
+        duration: 2000
+      })
+    }).catch(() => {
+      // 降级方案：使用execCommand
+      fallbackCopyTextToClipboard(shareUrl)
     })
-  })
+  } else {
+    // 降级方案：使用execCommand
+    fallbackCopyTextToClipboard(shareUrl)
+  }
+}
+
+// 降级复制函数
+const fallbackCopyTextToClipboard = (text) => {
+  const textArea = document.createElement('textarea')
+  textArea.value = text
+  
+  // 确保textarea不可见
+  textArea.style.position = 'fixed'
+  textArea.style.left = '-999999px'
+  textArea.style.top = '-999999px'
+  document.body.appendChild(textArea)
+  
+  // 选择并复制
+  textArea.focus()
+  textArea.select()
+  
+  try {
+    const successful = document.execCommand('copy')
+    if (successful) {
+      ElNotification({
+        title: '复制成功',
+        message: '分享链接已复制到剪贴板',
+        type: 'success',
+        duration: 2000
+      })
+    } else {
+      // 显示链接让用户手动复制
+      ElMessageBox.alert(
+        `请手动复制分享链接：<br><code>${text}</code>`,
+        '分享链接',
+        {
+          dangerouslyUseHTMLString: true,
+          confirmButtonText: '确定'
+        }
+      )
+    }
+  } catch (err) {
+    // 显示链接让用户手动复制
+    ElMessageBox.alert(
+      `请手动复制分享链接：<br><code>${text}</code>`,
+      '分享链接',
+      {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: '确定'
+      }
+    )
+  } finally {
+    document.body.removeChild(textArea)
+  }
 }
 
 const deleteRecord = async () => {

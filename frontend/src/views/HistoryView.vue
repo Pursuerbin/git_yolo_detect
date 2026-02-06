@@ -1526,13 +1526,23 @@ const shareRecord = async (record) => {
       }
     } else {
       // 备用方案：复制到剪贴板
-      await navigator.clipboard.writeText(shareData.url)
-      ElNotification({
-        title: '复制成功',
-        message: '分享链接已复制到剪贴板',
-        type: 'success',
-        duration: 2000
-      })
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(shareData.url)
+          ElNotification({
+            title: '复制成功',
+            message: '分享链接已复制到剪贴板',
+            type: 'success',
+            duration: 2000
+          })
+        } catch {
+          // 降级方案：使用execCommand
+          fallbackCopyTextToClipboard(shareData.url)
+        }
+      } else {
+        // 降级方案：使用execCommand
+        fallbackCopyTextToClipboard(shareData.url)
+      }
     }
 
   } catch (err) {
@@ -1990,6 +2000,56 @@ const getFullVideoUrl = (record) => {
     return `${API_BASE}/static/uploads/${record.video_path}`
   }
   return ''
+}
+
+// 降级复制函数
+const fallbackCopyTextToClipboard = (text) => {
+  const textArea = document.createElement('textarea')
+  textArea.value = text
+  
+  // 确保textarea不可见
+  textArea.style.position = 'fixed'
+  textArea.style.left = '-999999px'
+  textArea.style.top = '-999999px'
+  document.body.appendChild(textArea)
+  
+  // 选择并复制
+  textArea.focus()
+  textArea.select()
+  
+  try {
+    const successful = document.execCommand('copy')
+    if (successful) {
+      ElNotification({
+        title: '复制成功',
+        message: '分享链接已复制到剪贴板',
+        type: 'success',
+        duration: 2000
+      })
+    } else {
+      // 显示链接让用户手动复制
+      ElMessageBox.alert(
+        `请手动复制分享链接：<br><code>${text}</code>`,
+        '分享链接',
+        {
+          dangerouslyUseHTMLString: true,
+          confirmButtonText: '确定'
+        }
+      )
+    }
+  } catch (err) {
+    // 显示链接让用户手动复制
+    ElMessageBox.alert(
+      `请手动复制分享链接：<br><code>${text}</code>`,
+      '分享链接',
+      {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: '确定'
+      }
+    )
+  } finally {
+    document.body.removeChild(textArea)
+  }
 }
 
 
