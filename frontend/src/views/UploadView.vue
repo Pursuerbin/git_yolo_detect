@@ -694,36 +694,16 @@ let backendCheckInterval = null
 const getApiBase = () => {
   const hostname = window.location.hostname
   const protocol = window.location.protocol
+  const backendPort = 5000
 
   // 开发环境（本地）
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    // 尝试多个可能的端口
-    return 'http://localhost:5000'
+    return `http://localhost:${backendPort}`
   }
 
-  //   // 内网环境
-  // if (hostname === '100.78.250.8') {
-  //   return `http://100.78.250.8:5000`
-  // }
-
-
-  // // 服务器环境
-  // if (hostname === '8.163.2.84') {
-  //   // 公网IP
-  //   return `${protocol}//${hostname}:5000`
-  // }
-
-  // // 内网环境
-  // if (hostname === '172.19.20.152') {
-  //   return `http://172.19.20.152:5000`
-  // }
-
-  // 默认使用当前域
-  return `${protocol}//${hostname}${window.location.port ? ':' + window.location.port : ''}`
+  // 服务器环境
+  return `${protocol}//${hostname}:${backendPort}`
 }
-
-// 或者直接从当前页面URL获取
-// const API_BASE = window.location.protocol + '//' + window.location.host
 
 const API_BASE = getApiBase()
 console.log('🔧 API基础地址:', API_BASE)

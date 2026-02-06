@@ -945,19 +945,10 @@ const formatRunTime = computed(() => {
 const getApiBase = () => {
   const hostname = window.location.hostname
   const protocol = window.location.protocol
+  const backendPort = 5000
 
-  // 本地开发环境
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return `${protocol}//${hostname}:5000`
-  }
-
-  // 内网环境
-  if (hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.')) {
-    return `${protocol}//${hostname}:5000`
-  }
-
-  // 默认使用当前域
-  return `${protocol}//${hostname}${window.location.port ? ':' + window.location.port : ''}`
+  // 所有环境都使用后端端口5000
+  return `${protocol}//${hostname}:${backendPort}`
 }
 
 const API_BASE = getApiBase()

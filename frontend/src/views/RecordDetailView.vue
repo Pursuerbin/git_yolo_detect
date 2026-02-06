@@ -464,14 +464,15 @@ let defectChartInstance = null
 const getApiBase = () => {
   const hostname = window.location.hostname
   const protocol = window.location.protocol
+  const backendPort = 5000
 
   // 开发环境（本地）
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:5000'
+    return `http://localhost:${backendPort}`
   }
 
-  // 默认使用当前域
-  return `${protocol}//${hostname}${window.location.port ? ':' + window.location.port : ''}`
+  // 服务器环境
+  return `${protocol}//${hostname}:${backendPort}`
 }
 
 const apiBaseUrl = getApiBase()
