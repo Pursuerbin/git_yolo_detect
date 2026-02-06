@@ -1005,14 +1005,23 @@ const copyTableData = () => {
     `${index + 1}. ${det.class} - ${(det.confidence * 100).toFixed(1)}%`
   ).join('\n')
 
-  navigator.clipboard.writeText(text).then(() => {
-    ElNotification({
-      title: '复制成功',
-      message: '数据已复制到剪贴板',
-      type: 'success',
-      duration: 2000
+  // 尝试使用Clipboard API
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => {
+      ElNotification({
+        title: '复制成功',
+        message: '数据已复制到剪贴板',
+        type: 'success',
+        duration: 2000
+      })
+    }).catch(() => {
+      // 降级方案：使用execCommand
+      fallbackCopyTextToClipboard(text)
     })
-  })
+  } else {
+    // 降级方案：使用execCommand
+    fallbackCopyTextToClipboard(text)
+  }
 }
 
 const exportToPDF = async () => {
