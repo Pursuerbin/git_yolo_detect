@@ -1,0 +1,8 @@
+{
+    "backend_path": "D:\\project\\start_backend.bat",
+    "frontend_path": "D:\\project\\start_frontend.bat",
+    "auto_start": false,
+    "log_retention_days": 7,
+    "backend_port": 5000,
+    "frontend_port": 5173
+}
