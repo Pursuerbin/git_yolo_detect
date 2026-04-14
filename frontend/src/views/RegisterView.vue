@@ -1,15 +1,15 @@
 <template>
-  <div class="login-container">
-    <div class="login-card">
+  <div class="register-container">
+    <div class="register-card">
       <div class="header">
         <div class="logo">
           <div class="logo-icon">⚡</div>
           <h2>绝缘子缺陷检测系统</h2>
         </div>
-          <p>基于视觉算法的智能检测平台</p>
+        <p>创建新账户，开始智能检测</p>
       </div>
 
-      <form @submit.prevent="handleLogin" class="login-form">
+      <form @submit.prevent="handleRegister" class="register-form">
         <div class="input-group">
           <label for="username">
             <i class="icon-user"></i>
@@ -33,43 +33,39 @@
             v-model="password"
             type="password"
             id="password"
-            placeholder="请输入密码"
+            placeholder="请输入密码（至少6位）"
             required
           />
         </div>
 
-        <div class="options">
-          <label class="remember">
-            <input type="checkbox" v-model="rememberMe">
-            记住我
+        <div class="input-group">
+          <label for="confirmPassword">
+            <i class="icon-confirm"></i>
+            确认密码
           </label>
-          <button type="button" @click="showForgotPassword" class="forgot-btn">
-            忘记密码？
-          </button>
+          <input
+            v-model="confirmPassword"
+            type="password"
+            id="confirmPassword"
+            placeholder="请再次输入密码"
+            required
+          />
         </div>
 
         <button
           type="submit"
-          class="login-btn"
+          class="register-btn"
           :disabled="loading"
         >
           <span v-if="loading" class="spinner"></span>
-          {{ loading ? '登录中...' : '登录系统' }}
-        </button>
-
-        <div class="divider">
-          <span>或</span>
-        </div>
-
-        <button type="button" @click="useDemoAccount" class="demo-btn">
-          使用演示账号登录
+          {{ loading ? '注册中...' : '立即注册' }}
         </button>
       </form>
 
       <div class="footer">
-        <p>还没有账号？</p>
-        <button @click="goToRegister" class="register-link-btn">
-          创建新账户
+        <p>已有账号？</p>
+        <button @click="goToLogin" class="login-link-btn">
+          返回登录
         </button>
       </div>
     </div>
@@ -81,22 +77,21 @@
   </div>
 </template>
 
-<script setup lang="ts">
-// 在顶部导入
+<script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 import { logger } from '@/utils/logger'
 
 const router = useRouter()
+
+// 表单数据
 const username = ref('')
 const password = ref('')
-const rememberMe = ref(false)
+const confirmPassword = ref('')
 const loading = ref(false)
-const perfStartTime = ref(Date.now())
 
-
-// 动态获取后端URL（优化版）
+// 动态获取后端URL（与LoginView保持一致）
 const getBackendUrl = () => {
   const { protocol, hostname } = window.location
   const port = 5000
@@ -124,37 +119,50 @@ const getBackendUrl = () => {
 
 const backendUrl = getBackendUrl()
 
-// 登录处理函数（带完整日志）
-async function handleLogin() {
+// 注册处理函数
+async function handleRegister() {
   const startTime = Date.now()
-  const loginData = {
+  const registerData = {
     username: username.value,
-    password: password.value ? '***' : '', // 隐藏密码
-    rememberMe: rememberMe.value
+    password: password.value ? '***' : '',
+    confirmProvided: !!confirmPassword.value
   }
 
-  logger.action('login_attempt', loginData)
+  logger.action('register_attempt', registerData)
 
-  if (!username.value || !password.value) {
-    logger.warn('登录验证失败：用户名或密码为空', loginData)
-    alert('请输入用户名和密码')
+  // 前端表单验证
+  if (!username.value || !password.value || !confirmPassword.value) {
+    logger.warn('注册验证失败：存在空字段', registerData)
+    alert('请填写所有字段')
+    return
+  }
+
+  if (password.value.length < 6) {
+    logger.warn('密码长度不足6位', { username: username.value })
+    alert('密码长度至少为6位')
+    return
+  }
+
+  if (password.value !== confirmPassword.value) {
+    logger.warn('密码确认不一致', { username: username.value })
+    alert('两次输入的密码不一致')
     return
   }
 
   loading.value = true
-  logger.debug('开始登录请求', { backendUrl })
+  logger.debug('开始注册请求', { backendUrl, username: username.value })
 
   try {
-    logger.info('发送登录API请求', {
-      url: `${backendUrl}/api/login`,
+    logger.info('发送注册API请求', {
+      url: `${backendUrl}/api/register`,
       username: username.value
     })
 
-    const res = await axios.post(`${backendUrl}/api/login`, {
+    const res = await axios.post(`${backendUrl}/api/register`, {
       username: username.value,
       password: password.value
     }, {
-      timeout: 10000, // 10秒超时
+      timeout: 10000,
       headers: {
         'X-Requested-With': 'XMLHttpRequest',
         'Content-Type': 'application/json'
@@ -162,43 +170,34 @@ async function handleLogin() {
     })
 
     const responseTime = Date.now() - startTime
-    logger.debug('收到登录响应', {
+    logger.debug('收到注册响应', {
       success: res.data.success,
       responseTime: `${responseTime}ms`
     })
 
     if (res.data.success) {
-      logger.info('登录成功', {
+      logger.info('注册成功', {
         username: username.value,
         responseTime: `${responseTime}ms`
       })
 
-      if (rememberMe.value) {
-        try {
-          localStorage.setItem('rememberedUser', username.value)
-          logger.debug('保存记住我状态到localStorage')
-        } catch (storageError) {
-          logger.warn('localStorage存储失败，可能已满', { error: storageError })
-        }
-      }
-
-      // 记录成功登录后的跳转
+      alert('注册成功，请登录')
+      // 延迟跳转，确保用户看到提示
       setTimeout(() => {
-        logger.action('login_success_redirect', { to: '/upload' })
-        router.push('/upload')
+        logger.action('register_success_redirect', { to: '/login' })
+        router.push('/login')
       }, 800)
-
     } else {
-      logger.warn('登录失败（服务器返回）', {
+      logger.warn('注册失败（服务器返回）', {
         message: res.data.message,
         username: username.value
       })
-      alert(res.data.message)
+      alert(res.data.message || '注册失败，请稍后重试')
     }
 
-  } catch (err: any) {
+  } catch (err) {
     const errorTime = Date.now() - startTime
-    logger.error('登录请求异常', err, {
+    logger.error('注册请求异常', err, {
       username: username.value,
       backendUrl,
       requestTime: `${errorTime}ms`,
@@ -213,124 +212,64 @@ async function handleLogin() {
       errorMsg = '请求超时，请检查网络连接'
     } else if (err.code === 'ERR_NETWORK') {
       errorMsg = '网络错误，请检查后端服务是否启动'
+    } else if (err.message && err.message.includes('timeout')) {
+      errorMsg = '请求超时，请稍后重试'
     }
 
-    alert(`登录失败：${errorMsg}`)
+    alert(`注册失败：${errorMsg}`)
   } finally {
     loading.value = false
     const totalTime = Date.now() - startTime
-    logger.performance('login_process_complete', startTime, {
-      success: loading.value,
+    logger.performance('register_process_complete', startTime, {
+      success: !loading.value,
       totalTime: `${totalTime}ms`
     })
   }
 }
 
-// 使用演示账号
-function useDemoAccount() {
-  logger.action('use_demo_account')
-  username.value = 'demo'
-  password.value = '123456'
-  alert('已填充演示账号，点击登录即可体验')
-  logger.info('演示账号已填充')
+// 跳转到登录页
+function goToLogin() {
+  logger.action('navigate_to_login_from_register')
+  router.push('/login')
 }
-
-// 忘记密码
-function showForgotPassword() {
-  logger.action('forgot_password_click')
-  alert('请联系系统管理员重置密码\n邮箱：1597338110@qq.com\n电话：193-0301-0517')
-}
-
-// 跳转到注册
-function goToRegister() {
-  logger.action('navigate_to_register')
-  router.push('/register')
-}
-
-// 页面加载时检查记住的用户
-onMounted(() => {
-  logger.debug('LoginView组件已挂载')
-
-  try {
-    const rememberedUser = localStorage.getItem('rememberedUser')
-    if (rememberedUser) {
-      username.value = rememberedUser
-      rememberMe.value = true
-      logger.debug('从localStorage恢复记住的用户', { username: rememberedUser })
-    }
-
-    // 监听页面可见性变化
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-  } catch (storageError) {
-    logger.warn('读取localStorage失败', { error: storageError })
-  }
-})
-
-// 页面卸载
-onUnmounted(() => {
-  logger.debug('LoginView组件卸载')
-  document.removeEventListener('visibilitychange', handleVisibilityChange)
-})
 
 // 页面可见性变化处理
 function handleVisibilityChange() {
   if (document.visibilityState === 'visible') {
-    logger.debug('页面变为可见状态')
+    logger.debug('注册页面变为可见状态')
   } else {
-    logger.debug('页面变为隐藏状态')
+    logger.debug('注册页面变为隐藏状态')
   }
 }
 
-// 添加键盘事件支持
-function handleKeyPress(event: KeyboardEvent) {
-  if (event.key === 'Enter' && !loading.value) {
-    logger.action('keyboard_login_enter')
-    handleLogin()
-  }
-}
+// 组件挂载日志
+onMounted(() => {
+  logger.debug('RegisterView组件已挂载')
 
-// 添加点击外部关闭功能（如果需要）
-function handleClickOutside(event: MouseEvent) {
-  // 可以添加点击外部逻辑
-}
+  // 监听页面可见性变化
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
 
+// 组件卸载清理
+onUnmounted(() => {
+  logger.debug('RegisterView组件卸载')
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+})
 </script>
 
 <style scoped>
-.login-container {
+.register-container {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-
-  /* 修改这里：替换渐变为背景图片---放于public文件夹中 */
-  background-image: url('/1.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed; /* 可选：让背景固定，内容滚动时背景不动 */
-
-  /*background: linear-gradient(45deg, #2c3e50 0%, #3498db 100%);*/
-
+  background: linear-gradient(45deg, #2c3e50 0%, #3498db 100%);
   position: relative;
   overflow: hidden;
 }
 
-/* 添加加载遮罩样式 */
-.login-btn:disabled::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: inherit;
-}
-
-.login-container::before {
+.register-container::before {
   content: '';
   position: absolute;
   top: 0;
@@ -341,25 +280,17 @@ function handleClickOutside(event: MouseEvent) {
   background-size: cover;
 }
 
-/*背景毛玻璃实现    */
-.login-card {
+.register-card {
   width: 100%;
   max-width: 420px;
-
-  background: rgba(255, 255, 255, 0.05); /* 透明度调整为0.15，可以根据需要调整 */
-
-  /*background: white;*/
-
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
   border-radius: 20px;
   padding: 40px;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
   z-index: 1;
   animation: slideUp 0.6s ease;
-
-  /* 可选：为卡片内部元素提供更好的可读性 */
-  backdrop-filter: blur(10px); /* 毛玻璃效果，可选 */
-  border: 1px solid rgba(255, 255, 255, 0.2); /* 可选：添加边框增强层次感 */
-
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 @keyframes slideUp {
@@ -400,20 +331,21 @@ function handleClickOutside(event: MouseEvent) {
 }
 
 .header h2 {
-  color: #2c3e50;
+  color: white;
   font-size: 28px;
   font-weight: 700;
   margin: 0;
   text-align: left;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .header p {
-  color: #2c3e50;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 16px;
   margin-top: 5px;
 }
 
-.login-form {
+.register-form {
   margin-bottom: 30px;
 }
 
@@ -425,10 +357,11 @@ function handleClickOutside(event: MouseEvent) {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #2c3e50;
+  color: white;
   font-weight: 500;
   margin-bottom: 8px;
   font-size: 16px;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
 }
 
 .icon-user::before {
@@ -439,58 +372,31 @@ function handleClickOutside(event: MouseEvent) {
   content: "🔒";
 }
 
+.icon-confirm::before {
+  content: "✓";
+  display: inline-block;
+  font-weight: bold;
+}
+
 .input-group input {
   width: 100%;
   padding: 14px 16px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 10px;
   font-size: 16px;
   transition: all 0.3s;
   box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .input-group input:focus {
   outline: none;
   border-color: #3498db;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+  background: white;
 }
 
-.options {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 25px;
-}
-
-.remember {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #666;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.remember input {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
-.forgot-btn {
-  background: none;
-  border: none;
-  color: #3498db;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 0;
-}
-
-.forgot-btn:hover {
-  text-decoration: underline;
-}
-
-.login-btn {
+.register-btn {
   width: 100%;
   padding: 16px;
   background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
@@ -505,14 +411,15 @@ function handleClickOutside(event: MouseEvent) {
   justify-content: center;
   align-items: center;
   gap: 10px;
+  margin-top: 10px;
 }
 
-.login-btn:hover:not(:disabled) {
+.register-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3);
 }
 
-.login-btn:disabled {
+.register-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -532,62 +439,23 @@ function handleClickOutside(event: MouseEvent) {
   }
 }
 
-.divider {
-  display: flex;
-  align-items: center;
-  margin: 25px 0;
-  color: #95a5a6;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: #ecf0f1;
-}
-
-.divider span {
-  padding: 0 15px;
-  font-size: 14px;
-}
-
-.demo-btn {
-  width: 100%;
-  padding: 14px;
-  background: #f8f9fa;
-  color: #666;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.demo-btn:hover {
-  background: #e9ecef;
-  border-color: #3498db;
-  color: #3498db;
-}
-
 .footer {
   text-align: center;
   margin-top: 30px;
   padding-top: 25px;
-  border-top: 1px solid #ecf0f1;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .footer p {
-  color: #7f8c8d;
+  color: rgba(255, 255, 255, 0.8);
   margin-bottom: 10px;
 }
 
-.register-link-btn {
+.login-link-btn {
   padding: 12px 30px;
-  background: white;
-  color: #3498db;
-  border: 2px solid #3498db;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.5);
   border-radius: 10px;
   font-size: 15px;
   font-weight: 600;
@@ -595,9 +463,9 @@ function handleClickOutside(event: MouseEvent) {
   transition: all 0.3s;
 }
 
-.register-link-btn:hover {
+.login-link-btn:hover {
   background: #3498db;
-  color: white;
+  border-color: #3498db;
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
 }
